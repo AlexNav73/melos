@@ -1,0 +1,12 @@
+[package]
+name = "melos"
+version = "0.1.0"
+authors = ["AlexNav73 <fifthhorseman@mail.ru>"]
+
+[dependencies]
+hound = "*"
+gfx = "0.16.1"
+gfx_window_glutin = "0.18"
+glutin = "0.10.1"
+imgui = { git = "https://github.com/AlexNav73/imgui-rs.git" }
+imgui-gfx-renderer = { git = "https://github.com/AlexNav73/imgui-rs.git" }
