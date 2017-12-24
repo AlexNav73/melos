@@ -15,7 +15,7 @@ pub struct Song {
 
 impl Song {
     pub fn new<P: AsRef<Path>>(path: P) -> Self {
-        let reader = WavReader::open(path).unwrap(); // TODO: Error handling
+        let reader = WavReader::open(path).expect("Invalid path to file");
         let WavSpec { channels, sample_rate, .. } = reader.spec();
 
         Song {

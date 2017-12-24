@@ -18,7 +18,7 @@ pub trait Program {
     fn show<'a>(&mut self, ui: &Ui<'a>) -> bool;
     fn title(&self) -> &str;
 
-    fn on_event(&mut self, event: glutin::WindowEvent) { }
+    fn on_event(&mut self, _: glutin::WindowEvent) { }
 
     fn run(&mut self) {
         use gfx::{self, Device};
@@ -32,7 +32,7 @@ pub trait Program {
         let context = glutin::ContextBuilder::new().with_vsync(true);
         let window = glutin::WindowBuilder::new()
             .with_title(self.title())
-            .with_dimensions(1024, 768);
+            .with_dimensions(600, 650);
         let (window, mut device, mut factory, mut main_color, mut main_depth) =
             gfx_window_glutin::init::<ColorFormat, DepthFormat>(window, context, &events_loop);
         let mut encoder: gfx::Encoder<_, _> = factory.create_command_buffer().into();
@@ -64,53 +64,24 @@ pub trait Program {
         let mut quit = false;
 
         loop {
-            events_loop.poll_events(|event| {
+            let mut events = Vec::new();
+            events_loop.poll_events(|e| events.push(e));
+
+            for event in &events {
                 use glutin::WindowEvent::*;
                 use glutin::ElementState::Pressed;
                 use glutin::{Event, MouseButton, MouseScrollDelta, TouchPhase};
 
-                if let Event::WindowEvent { event, .. } = event {
+                if let Event::WindowEvent { ref event, .. } = *event {
                     match event {
-                        Resized(_, _) => {
+                        &Resized(_, _) => {
                             gfx_window_glutin::update_views(&window, &mut main_color, &mut main_depth);
                             renderer.update_render_target(main_color.clone());
                         }
-                        Closed => quit = true,
-                        KeyboardInput { input, .. } => {
-                            use glutin::VirtualKeyCode as Key;
-
-                            let pressed = input.state == Pressed;
-                            match input.virtual_keycode {
-                                Some(Key::Tab) => imgui.set_key(0, pressed),
-                                Some(Key::Left) => imgui.set_key(1, pressed),
-                                Some(Key::Right) => imgui.set_key(2, pressed),
-                                Some(Key::Up) => imgui.set_key(3, pressed),
-                                Some(Key::Down) => imgui.set_key(4, pressed),
-                                Some(Key::PageUp) => imgui.set_key(5, pressed),
-                                Some(Key::PageDown) => imgui.set_key(6, pressed),
-                                Some(Key::Home) => imgui.set_key(7, pressed),
-                                Some(Key::End) => imgui.set_key(8, pressed),
-                                Some(Key::Delete) => imgui.set_key(9, pressed),
-                                Some(Key::Back) => imgui.set_key(10, pressed),
-                                Some(Key::Return) => imgui.set_key(11, pressed),
-                                Some(Key::Escape) => imgui.set_key(12, pressed),
-                                Some(Key::A) => imgui.set_key(13, pressed),
-                                Some(Key::C) => imgui.set_key(14, pressed),
-                                Some(Key::V) => imgui.set_key(15, pressed),
-                                Some(Key::X) => imgui.set_key(16, pressed),
-                                Some(Key::Y) => imgui.set_key(17, pressed),
-                                Some(Key::Z) => imgui.set_key(18, pressed),
-                                Some(Key::LControl) |
-                                    Some(Key::RControl) => imgui.set_key_ctrl(pressed),
-                                    Some(Key::LShift) |
-                                        Some(Key::RShift) => imgui.set_key_shift(pressed),
-                                        Some(Key::LAlt) | Some(Key::RAlt) => imgui.set_key_alt(pressed),
-                                        Some(Key::LWin) | Some(Key::RWin) => imgui.set_key_super(pressed),
-                                        _ => {}
-                            }
-                        }
-                        MouseMoved { position: (x, y), .. } => mouse_state.pos = (x as i32, y as i32),
-                        MouseInput { state, button, .. } => {
+                        &Closed => quit = true,
+                        &KeyboardInput { input, .. } => configure_imgui_keys(&mut imgui, input),
+                        &MouseMoved { position: (x, y), .. } => mouse_state.pos = (x as i32, y as i32),
+                        &MouseInput { state, button, .. } => {
                             match button {
                                 MouseButton::Left => mouse_state.pressed.0 = state == Pressed,
                                 MouseButton::Right => mouse_state.pressed.1 = state == Pressed,
@@ -118,23 +89,21 @@ pub trait Program {
                                 _ => {}
                             }
                         }
-                        MouseWheel {
+                        &MouseWheel {
                             delta: MouseScrollDelta::LineDelta(_, y),
                             phase: TouchPhase::Moved,
                             ..
                         } |
-                        MouseWheel {
+                        &MouseWheel {
                             delta: MouseScrollDelta::PixelDelta(_, y),
                             phase: TouchPhase::Moved,
                             ..
                         } => mouse_state.wheel = y,
-                        ReceivedCharacter(c) => imgui.add_input_character(c),
+                        &ReceivedCharacter(c) => imgui.add_input_character(c),
                         _ => (),
                     }
-
-                    self.on_event(event);
                 }
-            });
+            }
 
             let now = Instant::now();
             let delta = now - last_frame;
@@ -157,10 +126,53 @@ pub trait Program {
             window.context().swap_buffers().unwrap();
             device.cleanup();
 
+            for event in events {
+                use glutin::Event;
+
+                if let Event::WindowEvent { event, .. } = event {
+                    self.on_event(event);
+                }
+            }
+
             if quit {
                 break;
             }
         }
+    }
+}
+
+fn configure_imgui_keys(imgui: &mut ImGui, input: glutin::KeyboardInput) {
+    use glutin::ElementState::Pressed;
+    use glutin::VirtualKeyCode as Key;
+
+    let pressed = input.state == Pressed;
+    match input.virtual_keycode {
+        Some(Key::Tab) => imgui.set_key(0, pressed),
+        Some(Key::Left) => imgui.set_key(1, pressed),
+        Some(Key::Right) => imgui.set_key(2, pressed),
+        Some(Key::Up) => imgui.set_key(3, pressed),
+        Some(Key::Down) => imgui.set_key(4, pressed),
+        Some(Key::PageUp) => imgui.set_key(5, pressed),
+        Some(Key::PageDown) => imgui.set_key(6, pressed),
+        Some(Key::Home) => imgui.set_key(7, pressed),
+        Some(Key::End) => imgui.set_key(8, pressed),
+        Some(Key::Delete) => imgui.set_key(9, pressed),
+        Some(Key::Back) => imgui.set_key(10, pressed),
+        Some(Key::Return) => imgui.set_key(11, pressed),
+        Some(Key::Escape) => imgui.set_key(12, pressed),
+        Some(Key::A) => imgui.set_key(13, pressed),
+        Some(Key::C) => imgui.set_key(14, pressed),
+        Some(Key::V) => imgui.set_key(15, pressed),
+        Some(Key::X) => imgui.set_key(16, pressed),
+        Some(Key::Y) => imgui.set_key(17, pressed),
+        Some(Key::Z) => imgui.set_key(18, pressed),
+        Some(Key::LControl) |
+            Some(Key::RControl) => imgui.set_key_ctrl(pressed),
+            Some(Key::LShift) |
+                Some(Key::RShift) => imgui.set_key_shift(pressed),
+                Some(Key::LAlt) | Some(Key::RAlt) => imgui.set_key_alt(pressed),
+                Some(Key::LWin) | Some(Key::RWin) => imgui.set_key_super(pressed),
+                _ => {}
     }
 }
 

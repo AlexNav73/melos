@@ -6,34 +6,30 @@ extern crate glutin;
 extern crate imgui;
 extern crate imgui_gfx_renderer;
 extern crate hound;
-extern crate regex;
-#[macro_use]
-extern crate lazy_static;
 
-mod song;
+//mod song;
 mod support_gfx;
 
 use imgui::*;
 use glutin::WindowEvent;
-use regex::Regex;
 
-use song::Song;
+//use song::Song;
 use support_gfx::Program;
-
-lazy_static! {
-    static ref SPLIT: Regex = Regex::new(r##"\[([0-9:]+)\]([^0-9:]*)\[([0-9:]+)\]"##).unwrap();
-}
 
 struct State {
     title: String,
-    lyrics: ImString
+    lyrics: ImString,
+    timings: Vec<[f32; 2]>,
+    path: ImString,
 }
 
 impl Default for State {
     fn default() -> Self {
         State {
             title: "melos".to_owned(),
-            lyrics: ImString::with_capacity(2000)
+            lyrics: ImString::with_capacity(2000),
+            path: ImString::with_capacity(256),
+            timings: Vec::new(),
         }
     }
 }
@@ -44,31 +40,54 @@ impl Program for State {
     }
 
     fn show<'a>(&mut self, ui: &Ui<'a>) -> bool {
+        self.show_lyrics(ui)
+    }
+
+    fn on_event(&mut self, _: WindowEvent) { }
+}
+
+impl State {
+    fn show_lyrics<'a>(&mut self, ui: &Ui<'a>) -> bool {
         let mut opened = true;
-        ui.window(im_str!("Hello world"))
-            .size((420.0, 565.0), ImGuiCond::Once)
+        ui.window(im_str!("Lyrics"))
+            .size((620.0, 565.0), ImGuiCond::FirstUseEver)
             .opened(&mut opened)
+            .collapsible(false)
             .build(|| {
+                ui.columns(2, im_str!("container"), false);
                 ui.input_text(im_str!(""), &mut self.lyrics)
                     .multiline(ImVec2::new(400.0, 530.0))
                     .build();
+                ui.next_column();
+                ui.input_text(im_str!("song"), &mut self.path).build();
+                ui.same_line(0.0);
+                if ui.button(im_str!("Open"), (0.0, 0.0)) {
+                    println!("{:?}", self.path);
+                }
+                if ui.button(im_str!("+"), (0.0, 0.0)) {
+                    self.timings.push([0.0, 0.0]);
+                }
+                let mut to_remove = Vec::new();
+                for (idx, interval) in self.timings.iter_mut().enumerate() {
+                    ui.with_id(idx as i32, || {
+                        if ui.button(im_str!("X"), (30.0, 0.0)) {
+                            to_remove.push(idx);
+                        }
+                        ui.same_line(0.0);
+                        ui.input_float2(im_str!(""), interval)
+                            .decimal_precision(2)
+                            .build();
+                        ui.same_line(0.0);
+                        if ui.button(im_str!("Play"), (40.0, 0.0)) {
+                            println!("{} {}", interval[0], interval[1]);
+                        }
+                    });
+                }
+                for i in to_remove {
+                    self.timings.remove(i);
+                }
             });
         opened
-    }
-
-    fn on_event(&mut self, event: WindowEvent) {
-        match event {
-            WindowEvent::ReceivedCharacter(c) => {
-                for captures in  SPLIT.captures_iter(self.lyrics.to_str()) {
-                    let start = captures.get(1).map_or("", |m| m.as_str());
-                    let text = captures.get(2).map_or("", |m| m.as_str());
-                    let end = captures.get(3).map_or("", |m| m.as_str());
-
-                    println!("START: {:?}\nTEXT: {:?}\nEND: {:?}", start, text, end);
-                }
-            },
-            _ => {}
-        }
     }
 }
 
