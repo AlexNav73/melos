@@ -5,6 +5,7 @@ authors = ["AlexNav73 <fifthhorseman@mail.ru>"]
 
 [dependencies]
 hound = "*"
+rodio = "*"
 gfx = "0.16.1"
 gfx_window_glutin = "0.18"
 glutin = "0.10.1"

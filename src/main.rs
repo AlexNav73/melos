@@ -6,14 +6,15 @@ extern crate glutin;
 extern crate imgui;
 extern crate imgui_gfx_renderer;
 extern crate hound;
+extern crate rodio;
 
-//mod song;
+mod song;
 mod support_gfx;
 
 use imgui::*;
 use glutin::WindowEvent;
 
-//use song::Song;
+use song::Song;
 use support_gfx::Program;
 
 struct State {
@@ -21,6 +22,7 @@ struct State {
     lyrics: ImString,
     timings: Vec<[f32; 2]>,
     path: ImString,
+    song: Option<Song>
 }
 
 impl Default for State {
@@ -30,6 +32,7 @@ impl Default for State {
             lyrics: ImString::with_capacity(2000),
             path: ImString::with_capacity(256),
             timings: Vec::new(),
+            song: None
         }
     }
 }
@@ -62,12 +65,18 @@ impl State {
                 ui.input_text(im_str!("song"), &mut self.path).build();
                 ui.same_line(0.0);
                 if ui.button(im_str!("Open"), (0.0, 0.0)) {
-                    println!("{:?}", self.path);
+                    self.song = Some(Song::new(self.path.to_str()));
                 }
                 if ui.button(im_str!("+"), (0.0, 0.0)) {
                     self.timings.push([0.0, 0.0]);
                 }
+                if ui.button(im_str!("Stop"), (0.0, 0.0)) {
+                    if let Some(ref song) = self.song {
+                        song.stop();
+                    }
+                }
                 let mut to_remove = Vec::new();
+                let mut time_range = None;
                 for (idx, interval) in self.timings.iter_mut().enumerate() {
                     ui.with_id(idx as i32, || {
                         if ui.button(im_str!("X"), (30.0, 0.0)) {
@@ -79,22 +88,37 @@ impl State {
                             .build();
                         ui.same_line(0.0);
                         if ui.button(im_str!("Play"), (40.0, 0.0)) {
-                            println!("{} {}", interval[0], interval[1]);
+                            let (start, duration) = to_secs(interval);
+                            time_range = Some((start, duration));
                         }
                     });
                 }
                 for i in to_remove {
                     self.timings.remove(i);
                 }
+                if let Some((start, duration)) = time_range {
+                    if let Some(ref song) = self.song {
+                        song.play(start, duration);
+                    }
+                }
             });
         opened
     }
 }
 
-fn main() {
-    //let mut song = Song::new("samples/sonne.wav");
-    //song.split_by(&[(27, 55), (84, 115)], "samples/sonna.wav");
+fn to_secs(interval: &[f32; 2]) -> (u32, u32) {
+    let start = to_s(interval[0]);
+    let end = to_s(interval[1]);
+    (start, end - start)
+}
 
+fn to_s(time: f32) -> u32 {
+    let decimal = time as u32;
+    let real = ((time - decimal as f32) * 100.0) as u32;
+    decimal * 60 + real
+}
+
+fn main() {
     State::default().run();
 }
 

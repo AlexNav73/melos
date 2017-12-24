@@ -1,82 +1,53 @@
 
-use hound;
-use hound::{WavReader, WavWriter, WavSpec};
+//use hound;
+use rodio;
+use rodio::Source;
+use rodio::buffer::SamplesBuffer;
+//use hound::{WavReader, WavWriter, WavSpec};
 
 use std::path::{Path, PathBuf};
-use std::io::{BufReader, BufWriter};
+use std::io::{BufReader, BufWriter, Read, Cursor};
 use std::fs::File;
 
 pub struct Song {
-    channels: u16,
-    sample_rate: u32,
-    last_sample: u32,
-    reader: WavReader<BufReader<File>>
+    samples: Vec<i16>,
+    sink: rodio::Sink,
+    samples_rate: u32,
+    channels: u16
 }
 
 impl Song {
     pub fn new<P: AsRef<Path>>(path: P) -> Self {
-        let reader = WavReader::open(path).expect("Invalid path to file");
-        let WavSpec { channels, sample_rate, .. } = reader.spec();
+        let file = File::open(path).expect("Invalid file name");
+        let endpoint = rodio::get_endpoints_list().next().unwrap();
+        let sink = rodio::Sink::new(&endpoint);
+        let decoder = rodio::Decoder::new(BufReader::new(file)).unwrap();
+        let samples_rate = decoder.samples_rate();
+        let channels = decoder.channels();
 
         Song {
+            samples: decoder.collect::<Vec<_>>(),
             channels,
-            sample_rate,
-            reader: reader,
-            last_sample: 0
+            sink,
+            samples_rate,
         }
     }
 
-    pub fn split_by<P: AsRef<Path>>(&mut self, intervals: &[(u32, u32)], file: P) {
-        for &(from, to) in intervals {
-            let mut writer = self.create_writer(file.as_ref(), from, to);
+    // D:\Programms\Rust\melos\samples\sonne.wav
 
-            let (from, to) = self.translate_interval(from, to);
-
-            let samples = self.reader.samples::<i16>();
-            let portion = samples
-                .skip_while(|x| *x.as_ref().unwrap() == 0)
-                .skip(from as usize)
-                .take((to - from) as usize);
-
-            for sample in portion {
-                writer.write_sample(sample.unwrap()).unwrap();
-            }
-
-            writer.finalize().unwrap();
-        }
+    pub fn play(&self, start: u32, duration: u32) {
+        let source = self.samples.iter()
+            .skip(self.channels as usize * self.samples_rate as usize * start as usize)
+            .take(self.channels as usize * self.samples_rate as usize * duration as usize)
+            .map(|x| *x)
+            .collect::<Vec<i16>>();
+        let source = SamplesBuffer::new(self.channels, self.samples_rate, source);
+        self.sink.append(source);
+        self.sink.play();
     }
 
-    pub fn duration(&self) -> u32 {
-        self.reader.len()
-    }
-
-    fn translate_interval(&mut self, from: u32, to: u32) -> (u32, u32) {
-        let from = from * self.sample_rate * self.channels as u32;
-        let from = from.checked_sub(self.last_sample).unwrap();
-        let to = to * self.sample_rate * self.channels as u32;
-        let to = to.checked_sub(self.last_sample).unwrap();
-        self.last_sample = to;
-        (from, to)
-    }
-
-    fn create_writer(&self, file: &Path, from: u32, to: u32) -> WavWriter<BufWriter<File>> {
-        let file = gen_file_name(file, from, to);
-        WavWriter::create(&file, spec(self.channels, self.sample_rate)).unwrap()
+    pub fn stop(&self) {
+        unimplemented!()
     }
 }
 
-fn gen_file_name(file: &Path, from: u32, to: u32) -> PathBuf {
-    let file_name = file.file_stem().unwrap().to_str().unwrap();
-    let path = file.parent().unwrap();
-    let file = format!("{}_{}_{}.wav", file_name, from, to);
-    path.join(file)
-}
-
-fn spec(channels: u16, sample_rate: u32) -> WavSpec {
-    WavSpec {
-        channels: channels,
-        sample_rate: sample_rate,
-        bits_per_sample: 16,
-        sample_format: hound::SampleFormat::Int
-    }
-}
