@@ -16,127 +16,113 @@ const CLEAR_COLOR: [f32; 4] = [114.0 / 255.0, 144.0 / 255.0, 154.0 / 255.0, 1.0]
 
 pub trait Program {
     fn show<'a>(&mut self, ui: &Ui<'a>) -> bool;
-    fn title(&self) -> &str;
+}
 
-    fn on_event(&mut self, _: glutin::WindowEvent) { }
+pub fn run<T: Program>(title: &'static str, mut program: T) {
+    use gfx::{self, Device};
+    use gfx_window_glutin;
+    use glutin::GlContext;
 
-    fn run(&mut self) {
-        use gfx::{self, Device};
-        use gfx_window_glutin;
-        use glutin::GlContext;
+    type ColorFormat = gfx::format::Rgba8;
+    type DepthFormat = gfx::format::DepthStencil;
 
-        type ColorFormat = gfx::format::Rgba8;
-        type DepthFormat = gfx::format::DepthStencil;
-
-        let mut events_loop = glutin::EventsLoop::new();
-        let context = glutin::ContextBuilder::new().with_vsync(true);
-        let window = glutin::WindowBuilder::new()
-            .with_title(self.title())
-            .with_dimensions(600, 650);
-        let (window, mut device, mut factory, mut main_color, mut main_depth) =
-            gfx_window_glutin::init::<ColorFormat, DepthFormat>(window, context, &events_loop);
-        let mut encoder: gfx::Encoder<_, _> = factory.create_command_buffer().into();
-        let shaders = {
-            let version = device.get_info().shading_language;
-            if version.is_embedded {
-                if version.major >= 3 {
-                    Shaders::GlSlEs300
-                } else {
-                    Shaders::GlSlEs100
-                }
-            } else if version.major >= 4 {
-                Shaders::GlSl400
-            } else if version.major >= 3 {
-                Shaders::GlSl130
+    let mut events_loop = glutin::EventsLoop::new();
+    let context = glutin::ContextBuilder::new().with_vsync(true);
+    let window = glutin::WindowBuilder::new()
+        .with_title(title)
+        .with_dimensions(600, 650);
+    let (window, mut device, mut factory, mut main_color, mut main_depth) =
+        gfx_window_glutin::init::<ColorFormat, DepthFormat>(window, context, &events_loop);
+    let mut encoder: gfx::Encoder<_, _> = factory.create_command_buffer().into();
+    let shaders = {
+        let version = device.get_info().shading_language;
+        if version.is_embedded {
+            if version.major >= 3 {
+                Shaders::GlSlEs300
             } else {
-                Shaders::GlSl110
+                Shaders::GlSlEs100
             }
-        };
+        } else if version.major >= 4 {
+            Shaders::GlSl400
+        } else if version.major >= 3 {
+            Shaders::GlSl130
+        } else {
+            Shaders::GlSl110
+        }
+    };
 
-        let mut imgui = ImGui::init();
-        let mut renderer = Renderer::init(&mut imgui, &mut factory, shaders, main_color.clone())
-            .expect("Failed to initialize renderer");
+    let mut imgui = ImGui::init();
+    let mut renderer = Renderer::init(&mut imgui, &mut factory, shaders, main_color.clone())
+        .expect("Failed to initialize renderer");
 
-        configure_keys(&mut imgui);
+    configure_keys(&mut imgui);
 
-        let mut last_frame = Instant::now();
-        let mut mouse_state = MouseState::default();
-        let mut quit = false;
+    let mut last_frame = Instant::now();
+    let mut mouse_state = MouseState::default();
+    let mut quit = false;
 
-        loop {
-            let mut events = Vec::new();
-            events_loop.poll_events(|e| events.push(e));
+    loop {
+        events_loop.poll_events(|event| {
+            use glutin::WindowEvent::*;
+            use glutin::ElementState::Pressed;
+            use glutin::{Event, MouseButton, MouseScrollDelta, TouchPhase};
 
-            for event in &events {
-                use glutin::WindowEvent::*;
-                use glutin::ElementState::Pressed;
-                use glutin::{Event, MouseButton, MouseScrollDelta, TouchPhase};
-
-                if let Event::WindowEvent { ref event, .. } = *event {
-                    match event {
-                        &Resized(_, _) => {
-                            gfx_window_glutin::update_views(&window, &mut main_color, &mut main_depth);
-                            renderer.update_render_target(main_color.clone());
-                        }
-                        &Closed => quit = true,
-                        &KeyboardInput { input, .. } => configure_imgui_keys(&mut imgui, input),
-                        &MouseMoved { position: (x, y), .. } => mouse_state.pos = (x as i32, y as i32),
-                        &MouseInput { state, button, .. } => {
-                            match button {
-                                MouseButton::Left => mouse_state.pressed.0 = state == Pressed,
-                                MouseButton::Right => mouse_state.pressed.1 = state == Pressed,
-                                MouseButton::Middle => mouse_state.pressed.2 = state == Pressed,
-                                _ => {}
-                            }
-                        }
-                        &MouseWheel {
-                            delta: MouseScrollDelta::LineDelta(_, y),
-                            phase: TouchPhase::Moved,
-                            ..
-                        } |
-                        &MouseWheel {
-                            delta: MouseScrollDelta::PixelDelta(_, y),
-                            phase: TouchPhase::Moved,
-                            ..
-                        } => mouse_state.wheel = y,
-                        &ReceivedCharacter(c) => imgui.add_input_character(c),
-                        _ => (),
+            if let Event::WindowEvent { event, .. } = event {
+                match event {
+                    Resized(_, _) => {
+                        gfx_window_glutin::update_views(&window, &mut main_color, &mut main_depth);
+                        renderer.update_render_target(main_color.clone());
                     }
+                    Closed => quit = true,
+                    KeyboardInput { input, .. } => configure_imgui_keys(&mut imgui, input),
+                    MouseMoved { position: (x, y), .. } => mouse_state.pos = (x as i32, y as i32),
+                    MouseInput { state, button, .. } => {
+                        match button {
+                            MouseButton::Left => mouse_state.pressed.0 = state == Pressed,
+                            MouseButton::Right => mouse_state.pressed.1 = state == Pressed,
+                            MouseButton::Middle => mouse_state.pressed.2 = state == Pressed,
+                            _ => {}
+                        }
+                    }
+                    MouseWheel {
+                        delta: MouseScrollDelta::LineDelta(_, y),
+                        phase: TouchPhase::Moved,
+                        ..
+                    } |
+                    MouseWheel {
+                        delta: MouseScrollDelta::PixelDelta(_, y),
+                        phase: TouchPhase::Moved,
+                        ..
+                    } => mouse_state.wheel = y,
+                    ReceivedCharacter(c) => imgui.add_input_character(c),
+                    _ => (),
                 }
             }
+        });
 
-            let now = Instant::now();
-            let delta = now - last_frame;
-            let delta_s = delta.as_secs() as f32 + delta.subsec_nanos() as f32 / 1_000_000_000.0;
-            last_frame = now;
+        let now = Instant::now();
+        let delta = now - last_frame;
+        let delta_s = delta.as_secs() as f32 + delta.subsec_nanos() as f32 / 1_000_000_000.0;
+        last_frame = now;
 
-            update_mouse(&mut imgui, &mut mouse_state);
+        update_mouse(&mut imgui, &mut mouse_state);
 
-            let size_points = window.get_inner_size_points().unwrap();
-            let size_pixels = window.get_inner_size_pixels().unwrap();
+        let size_points = window.get_inner_size_points().unwrap();
+        let size_pixels = window.get_inner_size_pixels().unwrap();
 
-            let ui = imgui.frame(size_points, size_pixels, delta_s);
-            if !self.show(&ui) {
-                break;
-            }
+        let ui = imgui.frame(size_points, size_pixels, delta_s);
+        if !program.show(&ui) {
+            break;
+        }
 
-            encoder.clear(&main_color, CLEAR_COLOR);
-            renderer.render(ui, &mut factory, &mut encoder).expect("Rendering failed");
-            encoder.flush(&mut device);
-            window.context().swap_buffers().unwrap();
-            device.cleanup();
+        encoder.clear(&main_color, CLEAR_COLOR);
+        renderer.render(ui, &mut factory, &mut encoder).expect("Rendering failed");
+        encoder.flush(&mut device);
+        window.context().swap_buffers().unwrap();
+        device.cleanup();
 
-            for event in events {
-                use glutin::Event;
-
-                if let Event::WindowEvent { event, .. } = event {
-                    self.on_event(event);
-                }
-            }
-
-            if quit {
-                break;
-            }
+        if quit {
+            break;
         }
     }
 }

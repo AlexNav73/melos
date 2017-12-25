@@ -18,7 +18,6 @@ use song::Song;
 use support_gfx::Program;
 
 struct State {
-    title: String,
     lyrics: ImString,
     timings: Vec<[f32; 2]>,
     path: ImString,
@@ -28,7 +27,6 @@ struct State {
 impl Default for State {
     fn default() -> Self {
         State {
-            title: "melos".to_owned(),
             lyrics: ImString::with_capacity(2000),
             path: ImString::with_capacity(256),
             timings: Vec::new(),
@@ -38,15 +36,9 @@ impl Default for State {
 }
 
 impl Program for State {
-    fn title(&self) -> &str {
-        self.title.as_str()
-    }
-
     fn show<'a>(&mut self, ui: &Ui<'a>) -> bool {
         self.show_lyrics(ui)
     }
-
-    fn on_event(&mut self, _: WindowEvent) { }
 }
 
 impl State {
@@ -119,6 +111,6 @@ fn to_s(time: f32) -> u32 {
 }
 
 fn main() {
-    State::default().run();
+    support_gfx::run("melos", State::default());
 }
 
