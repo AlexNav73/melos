@@ -9,17 +9,18 @@ extern crate hound;
 extern crate rodio;
 
 mod song;
+mod player;
 mod support_gfx;
 
 use imgui::*;
-use glutin::WindowEvent;
 
 use song::Song;
-use support_gfx::Program;
+use player::Player;
+use support_gfx::AppContext;
 
 struct State {
     lyrics: ImString,
-    timings: Vec<[f32; 2]>,
+    timings: Vec<Player>,
     path: ImString,
     song: Option<Song>
 }
@@ -35,7 +36,7 @@ impl Default for State {
     }
 }
 
-impl Program for State {
+impl AppContext for State {
     fn show<'a>(&mut self, ui: &Ui<'a>) -> bool {
         self.show_lyrics(ui)
     }
@@ -60,54 +61,45 @@ impl State {
                     self.song = Some(Song::new(self.path.to_str()));
                 }
                 if ui.button(im_str!("+"), (0.0, 0.0)) {
-                    self.timings.push([0.0, 0.0]);
+                    self.timings.push(Player::new(0.0, 0.0));
                 }
                 if ui.button(im_str!("Stop"), (0.0, 0.0)) {
-                    if let Some(ref song) = self.song {
+                    if let Some(ref mut song) = self.song {
                         song.stop();
                     }
                 }
-                let mut to_remove = Vec::new();
-                let mut time_range = None;
-                for (idx, interval) in self.timings.iter_mut().enumerate() {
+                let mut active_player = None;
+                for (idx, player) in self.timings.iter_mut().enumerate() {
                     ui.with_id(idx as i32, || {
                         if ui.button(im_str!("X"), (30.0, 0.0)) {
-                            to_remove.push(idx);
+                            player.is_deleted = true;
                         }
                         ui.same_line(0.0);
-                        ui.input_float2(im_str!(""), interval)
+                        let mut interval = [player.start, player.end];
+                        ui.input_float2(im_str!(""), &mut interval)
                             .decimal_precision(2)
                             .build();
+                        player.update(interval[0], interval[1]);
                         ui.same_line(0.0);
                         if ui.button(im_str!("Play"), (40.0, 0.0)) {
-                            let (start, duration) = to_secs(interval);
-                            time_range = Some((start, duration));
+                            active_player = Some(player);
                         }
                     });
                 }
-                for i in to_remove {
-                    self.timings.remove(i);
-                }
-                if let Some((start, duration)) = time_range {
+                if let Some(player) = active_player {
                     if let Some(ref song) = self.song {
-                        song.play(start, duration);
+                        player.opened = true;
+                        song.play(player);
                     }
                 }
             });
+
+        self.timings.retain(|x| !x.is_deleted);
+        self.timings.iter_mut()
+            .filter(|x| x.opened)
+            .for_each(|x| { x.show(ui); });
         opened
     }
-}
-
-fn to_secs(interval: &[f32; 2]) -> (u32, u32) {
-    let start = to_s(interval[0]);
-    let end = to_s(interval[1]);
-    (start, end - start)
-}
-
-fn to_s(time: f32) -> u32 {
-    let decimal = time as u32;
-    let real = ((time - decimal as f32) * 100.0) as u32;
-    decimal * 60 + real
 }
 
 fn main() {

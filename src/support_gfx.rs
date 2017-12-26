@@ -14,11 +14,11 @@ struct MouseState {
 
 const CLEAR_COLOR: [f32; 4] = [114.0 / 255.0, 144.0 / 255.0, 154.0 / 255.0, 1.0];
 
-pub trait Program {
+pub trait AppContext {
     fn show<'a>(&mut self, ui: &Ui<'a>) -> bool;
 }
 
-pub fn run<T: Program>(title: &'static str, mut program: T) {
+pub fn run<T: AppContext>(title: &'static str, mut app: T) {
     use gfx::{self, Device};
     use gfx_window_glutin;
     use glutin::GlContext;
@@ -111,7 +111,7 @@ pub fn run<T: Program>(title: &'static str, mut program: T) {
         let size_pixels = window.get_inner_size_pixels().unwrap();
 
         let ui = imgui.frame(size_points, size_pixels, delta_s);
-        if !program.show(&ui) {
+        if !app.show(&ui) {
             break;
         }
 
