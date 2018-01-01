@@ -30,11 +30,8 @@ impl Player {
         self.end = end;
     }
 
-    pub fn play(&mut self) {
-        if let Some(ref song) = self.song {
-            self.opened = true;
-            song.play((self.start(), self.duration()));
-        }
+    pub fn open(&mut self) {
+        self.opened = true;
     }
 
     pub fn stop(&self) {
@@ -72,9 +69,21 @@ impl AppContext for Player {
             .opened(&mut opened)
             .collapsible(true)
             .build(|| {
+                if ui.button(im_str!("Play"), (0.0, 0.0)) {
+                    if let Some(ref song) = self.song {
+                        song.play((self.start(), self.duration()));
+                    }
+                }
+                ui.same_line(0.0);
                 if ui.button(im_str!("Stop"), (0.0, 0.0)) {
                     if let Some(ref song) = self.song {
                         song.stop();
+                    }
+                }
+                ui.same_line(0.0);
+                if ui.button(im_str!("Pause"), (0.0, 0.0)) {
+                    if let Some(ref song) = self.song {
+                        song.pause();
                     }
                 }
             });

@@ -93,8 +93,8 @@ impl State {
                             .build();
                         player.update(interval[0], interval[1]);
                         ui.same_line(0.0);
-                        if ui.button(im_str!("Play"), (40.0, 0.0)) {
-                            player.play();
+                        if ui.button(im_str!("Player"), (50.0, 0.0)) {
+                            player.open();
                         }
                     });
                 }
