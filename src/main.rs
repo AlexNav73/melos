@@ -77,14 +77,10 @@ impl State {
                     self.song = Some(Song::new(self.path.to_str()));
                 }
                 if ui.button(im_str!("+"), (0.0, 0.0)) {
-                    self.timings.push(Player::new(0.0, 0.0));
-                }
-                if ui.button(im_str!("Stop"), (0.0, 0.0)) {
-                    if let Some(ref mut song) = self.song {
-                        song.stop();
+                    if let Some(ref song) = self.song {
+                        self.timings.push(Player::new(song.clone(), 0.0, 0.0));
                     }
                 }
-                let mut active_player = None;
                 for (idx, player) in self.timings.iter_mut().enumerate() {
                     ui.with_id(idx as i32, || {
                         if ui.button(im_str!("X"), (30.0, 0.0)) {
@@ -98,15 +94,9 @@ impl State {
                         player.update(interval[0], interval[1]);
                         ui.same_line(0.0);
                         if ui.button(im_str!("Play"), (40.0, 0.0)) {
-                            active_player = Some(player);
+                            player.play();
                         }
                     });
-                }
-                if let Some(player) = active_player {
-                    if let Some(ref song) = self.song {
-                        player.opened = true;
-                        song.play(player);
-                    }
                 }
             });
 
@@ -151,11 +141,16 @@ impl State {
         let mut json = String::with_capacity(file.metadata().unwrap().len() as usize);
         file.read_to_string(&mut json).unwrap();
         let data = serde_json::from_str::<AppData>(&json).expect("Invalid json file");
+        let song = Song::new(data.path.as_str());
 
         self.lyrics = ImString::new(data.lyrics);
         self.timings = data.timings;
-        self.path = ImString::new(data.path.as_str());
-        self.song = Some(Song::new(data.path));
+        self.path = ImString::new(data.path);
+        self.song = Some(song.clone());
+
+        for x in &mut self.timings {
+            x.set_song(song.clone());
+        }
     }
 }
 

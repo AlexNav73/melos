@@ -2,6 +2,7 @@
 use imgui::*;
 
 use support_gfx::AppContext;
+use song::Song;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Player {
@@ -10,12 +11,18 @@ pub struct Player {
     #[serde(skip)]
     pub(crate) is_deleted: bool,
     pub(crate) start: f32,
-    pub(crate) end: f32
+    pub(crate) end: f32,
+    #[serde(skip)]
+    song: Option<Song>
 }
 
 impl Player {
-    pub fn new(start: f32, end: f32) -> Self {
-        Player { start, end, opened: false, is_deleted: false }
+    pub fn new(song: Song, start: f32, end: f32) -> Self {
+        Player { start, end, opened: false, is_deleted: false, song: Some(song) }
+    }
+
+    pub fn set_song(&mut self, song: Song) {
+        self.song = Some(song);
     }
 
     pub fn update(&mut self, start: f32, end: f32) {
@@ -23,11 +30,30 @@ impl Player {
         self.end = end;
     }
 
-    pub fn start(&self) -> u32 {
+    pub fn play(&mut self) {
+        if let Some(ref song) = self.song {
+            self.opened = true;
+            song.play((self.start(), self.duration()));
+        }
+    }
+
+    pub fn stop(&self) {
+        if let Some(ref song) = self.song {
+            song.stop();
+        }
+    }
+
+    pub fn pause(&self) {
+        if let Some(ref song) = self.song {
+            song.pause();
+        }
+    }
+
+    fn start(&self) -> u32 {
         to_s(self.start)
     }
 
-    pub fn duration(&self) -> u32 {
+    fn duration(&self) -> u32 {
         to_s(self.end) - self.start()
     }
 }
@@ -46,7 +72,11 @@ impl AppContext for Player {
             .opened(&mut opened)
             .collapsible(true)
             .build(|| {
-                ui.text(im_str!("player"));
+                if ui.button(im_str!("Stop"), (0.0, 0.0)) {
+                    if let Some(ref song) = self.song {
+                        song.stop();
+                    }
+                }
             });
         self.opened = opened;
         opened
