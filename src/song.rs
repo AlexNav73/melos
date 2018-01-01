@@ -53,5 +53,9 @@ impl Song {
     pub fn stop(&mut self) {
         self.sink = rodio::Sink::new(&self.endpoint);
     }
+
+    pub fn pause(&self) {
+        self.sink.pause();
+    }
 }
 

@@ -3,8 +3,11 @@ use imgui::*;
 
 use support_gfx::AppContext;
 
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Player {
+    #[serde(skip)]
     pub(crate) opened: bool,
+    #[serde(skip)]
     pub(crate) is_deleted: bool,
     pub(crate) start: f32,
     pub(crate) end: f32

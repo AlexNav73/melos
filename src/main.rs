@@ -5,12 +5,17 @@ extern crate glutin;
 #[macro_use]
 extern crate imgui;
 extern crate imgui_gfx_renderer;
-extern crate hound;
 extern crate rodio;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde_json;
 
 mod song;
 mod player;
 mod support_gfx;
+
+use std::fs::File;
 
 use imgui::*;
 
@@ -18,11 +23,13 @@ use song::Song;
 use player::Player;
 use support_gfx::AppContext;
 
+const SAVE_FILE: &str = "save.json";
+
 struct State {
     lyrics: ImString,
     timings: Vec<Player>,
     path: ImString,
-    song: Option<Song>
+    song: Option<Song>,
 }
 
 impl Default for State {
@@ -31,9 +38,16 @@ impl Default for State {
             lyrics: ImString::with_capacity(2000),
             path: ImString::with_capacity(256),
             timings: Vec::new(),
-            song: None
+            song: None,
         }
     }
+}
+
+#[derive(Serialize, Deserialize)]
+struct AppData {
+    lyrics: String,
+    timings: Vec<Player>,
+    path: String
 }
 
 impl AppContext for State {
@@ -45,6 +59,7 @@ impl AppContext for State {
 impl State {
     fn show_lyrics<'a>(&mut self, ui: &Ui<'a>) -> bool {
         let mut opened = true;
+        self.show_main_menu(ui);
         ui.window(im_str!("Lyrics"))
             .size((620.0, 565.0), ImGuiCond::FirstUseEver)
             .opened(&mut opened)
@@ -58,6 +73,7 @@ impl State {
                 ui.input_text(im_str!("song"), &mut self.path).build();
                 ui.same_line(0.0);
                 if ui.button(im_str!("Open"), (0.0, 0.0)) {
+                    self.timings = Vec::new();
                     self.song = Some(Song::new(self.path.to_str()));
                 }
                 if ui.button(im_str!("+"), (0.0, 0.0)) {
@@ -99,6 +115,47 @@ impl State {
             .filter(|x| x.opened)
             .for_each(|x| { x.show(ui); });
         opened
+    }
+
+    fn show_main_menu<'a>(&mut self, ui: &Ui<'a>) {
+        ui.main_menu_bar(|| {
+            ui.menu(im_str!("File"))
+              .build(|| {
+                  if ui.menu_item(im_str!("Save")).build() {
+                      self.save();
+                  }
+                  if ui.menu_item(im_str!("Open")).build() {
+                      self.open();
+                  }
+              });
+        });
+    }
+
+    fn save(&self) {
+        use std::io::Write;
+
+        let data = AppData {
+            lyrics: self.lyrics.to_str().to_owned(),
+            timings: self.timings.as_slice().to_vec(),
+            path: self.path.to_str().to_owned()
+        };
+
+        let mut file = File::create(SAVE_FILE).expect("Could not create file");
+        file.write(serde_json::to_string(&data).unwrap().as_bytes()).unwrap();
+    }
+
+    fn open(&mut self) {
+        use std::io::Read;
+
+        let mut file = File::open(SAVE_FILE).expect("Could not open file");
+        let mut json = String::with_capacity(file.metadata().unwrap().len() as usize);
+        file.read_to_string(&mut json).unwrap();
+        let data = serde_json::from_str::<AppData>(&json).expect("Invalid json file");
+
+        self.lyrics = ImString::new(data.lyrics);
+        self.timings = data.timings;
+        self.path = ImString::new(data.path.as_str());
+        self.song = Some(Song::new(data.path));
     }
 }
 
