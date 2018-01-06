@@ -4,15 +4,20 @@ use imgui::*;
 use support_gfx::AppContext;
 use song::Song;
 
+#[derive(Default)]
 pub struct Player {
     start: f32,
     end: f32,
-    song: Option<Song>
+    song: Option<Song>,
+    volume: f32
 }
 
 impl Player {
     pub fn new() -> Self {
-        Player { start: 0.0, end: 0.0, song: None }
+        Player {
+            volume: 50.0,
+            .. Self::default()
+        }
     }
 
     pub fn set_song(&mut self, song: Song) {
@@ -42,6 +47,12 @@ impl Player {
         }
     }
 
+    pub fn volume(&self, volume: f32) {
+        if let Some(ref song) = self.song {
+            song.volume(volume / 100.0);
+        }
+    }
+
     fn start(&self) -> u32 {
         to_s(self.start)
     }
@@ -61,15 +72,19 @@ impl AppContext for Player {
     fn show<'a>(&mut self, ui: &Ui<'a>) -> bool {
         ui.child_frame(im_str!("player"), (340.0, 200.0))
             .build(|| {
-                if ui.button(im_str!("Play"), (0.0, 0.0)) {
+                ui.slider_float(im_str!("volume"), &mut self.volume, 0.0, 100.0)
+                    .display_format(im_str!("%.0f"))
+                    .build();
+                self.volume(self.volume);
+                if ui.button(im_str!("play"), (0.0, 0.0)) {
                     self.play();
                 }
                 ui.same_line(0.0);
-                if ui.button(im_str!("Stop"), (0.0, 0.0)) {
+                if ui.button(im_str!("stop"), (0.0, 0.0)) {
                     self.stop();
                 }
                 ui.same_line(0.0);
-                if ui.button(im_str!("Pause"), (0.0, 0.0)) {
+                if ui.button(im_str!("pause"), (0.0, 0.0)) {
                     self.pause();
                 }
             });

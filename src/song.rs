@@ -44,6 +44,10 @@ impl Song {
     pub fn pause(&self) {
         self.sender.send(SongMsg::Pause).unwrap()
     }
+
+    pub fn volume(&self, volume: f32) {
+        self.sender.send(SongMsg::Volume(volume)).unwrap();
+    }
 }
 
 enum SongMsg {
@@ -51,6 +55,7 @@ enum SongMsg {
     Play((u32, u32)),
     Stop,
     Pause,
+    Volume(f32)
 }
 
 struct SongThread {
@@ -100,12 +105,17 @@ impl SongThread {
         self.sink.pause();
     }
 
+    fn volume(&mut self, volume: f32) {
+        self.sink.set_volume(volume);
+    }
+
     fn handle(&mut self, msg: SongMsg) {
         match msg {
             SongMsg::Play(t) => self.play(t),
             SongMsg::Stop => self.stop(),
             SongMsg::Pause => self.pause(),
-            _ => unreachable!()
+            SongMsg::Volume(v) => self.volume(v),
+            SongMsg::Open(_) => {}
         }
     }
 }

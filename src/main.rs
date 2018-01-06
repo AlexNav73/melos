@@ -74,7 +74,7 @@ impl State {
                 ui.next_column();
                 ui.input_text(im_str!("song"), &mut self.path).build();
                 ui.same_line(0.0);
-                if ui.button(im_str!("Open"), (0.0, 0.0)) {
+                if ui.button(im_str!("open"), (0.0, 0.0)) {
                     self.timings = Vec::new();
                     self.song = Some(Song::new(self.path.to_str()));
                 }
