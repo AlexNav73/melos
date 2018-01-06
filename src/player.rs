@@ -4,21 +4,15 @@ use imgui::*;
 use support_gfx::AppContext;
 use song::Song;
 
-#[derive(Clone, Serialize, Deserialize)]
 pub struct Player {
-    #[serde(skip)]
-    pub(crate) opened: bool,
-    #[serde(skip)]
-    pub(crate) is_deleted: bool,
-    pub(crate) start: f32,
-    pub(crate) end: f32,
-    #[serde(skip)]
+    start: f32,
+    end: f32,
     song: Option<Song>
 }
 
 impl Player {
-    pub fn new(song: Song, start: f32, end: f32) -> Self {
-        Player { start, end, opened: false, is_deleted: false, song: Some(song) }
+    pub fn new() -> Self {
+        Player { start: 0.0, end: 0.0, song: None }
     }
 
     pub fn set_song(&mut self, song: Song) {
@@ -30,8 +24,10 @@ impl Player {
         self.end = end;
     }
 
-    pub fn open(&mut self) {
-        self.opened = true;
+    pub fn play(&self) {
+        if let Some(ref song) = self.song {
+            song.play((self.start(), self.duration()));
+        }
     }
 
     pub fn stop(&self) {
@@ -63,32 +59,21 @@ fn to_s(time: f32) -> u32 {
 
 impl AppContext for Player {
     fn show<'a>(&mut self, ui: &Ui<'a>) -> bool {
-        let mut opened = self.opened;
-        ui.window(im_str!("Player"))
-            .size((100.0, 100.0), ImGuiCond::FirstUseEver)
-            .opened(&mut opened)
-            .collapsible(true)
+        ui.child_frame(im_str!("player"), (340.0, 200.0))
             .build(|| {
                 if ui.button(im_str!("Play"), (0.0, 0.0)) {
-                    if let Some(ref song) = self.song {
-                        song.play((self.start(), self.duration()));
-                    }
+                    self.play();
                 }
                 ui.same_line(0.0);
                 if ui.button(im_str!("Stop"), (0.0, 0.0)) {
-                    if let Some(ref song) = self.song {
-                        song.stop();
-                    }
+                    self.stop();
                 }
                 ui.same_line(0.0);
                 if ui.button(im_str!("Pause"), (0.0, 0.0)) {
-                    if let Some(ref song) = self.song {
-                        song.pause();
-                    }
+                    self.pause();
                 }
             });
-        self.opened = opened;
-        opened
+        true
     }
 }
 

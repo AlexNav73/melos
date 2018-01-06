@@ -27,9 +27,10 @@ const SAVE_FILE: &str = "save.json";
 
 struct State {
     lyrics: ImString,
-    timings: Vec<Player>,
+    timings: Vec<([f32; 2], bool)>,
     path: ImString,
     song: Option<Song>,
+    player: Player
 }
 
 impl Default for State {
@@ -39,6 +40,7 @@ impl Default for State {
             path: ImString::with_capacity(256),
             timings: Vec::new(),
             song: None,
+            player: Player::new()
         }
     }
 }
@@ -46,7 +48,7 @@ impl Default for State {
 #[derive(Serialize, Deserialize)]
 struct AppData {
     lyrics: String,
-    timings: Vec<Player>,
+    timings: Vec<(f32, f32)>,
     path: String
 }
 
@@ -77,33 +79,15 @@ impl State {
                     self.song = Some(Song::new(self.path.to_str()));
                 }
                 if ui.button(im_str!("+"), (0.0, 0.0)) {
-                    if let Some(ref song) = self.song {
-                        self.timings.push(Player::new(song.clone(), 0.0, 0.0));
-                    }
+                    self.timings.push(([0.0, 0.0], false));
                 }
-                for (idx, player) in self.timings.iter_mut().enumerate() {
-                    ui.with_id(idx as i32, || {
-                        if ui.button(im_str!("X"), (30.0, 0.0)) {
-                            player.is_deleted = true;
-                        }
-                        ui.same_line(0.0);
-                        let mut interval = [player.start, player.end];
-                        ui.input_float2(im_str!(""), &mut interval)
-                            .decimal_precision(2)
-                            .build();
-                        player.update(interval[0], interval[1]);
-                        ui.same_line(0.0);
-                        if ui.button(im_str!("Player"), (50.0, 0.0)) {
-                            player.open();
-                        }
-                    });
-                }
+                self.show_quatrains(ui);
+                ui.spacing();
+                self.player.show(ui);
             });
 
-        self.timings.retain(|x| !x.is_deleted);
-        self.timings.iter_mut()
-            .filter(|x| x.opened)
-            .for_each(|x| { x.show(ui); });
+        self.timings.retain(|x| !x.1);
+
         opened
     }
 
@@ -121,12 +105,37 @@ impl State {
         });
     }
 
+    fn show_quatrains<'a>(&mut self, ui: &Ui<'a>) {
+        ui.child_frame(im_str!("quatrains"), (340.0, 200.0))
+            .show_scrollbar(true)
+            .show_borders(true)
+            .build(|| {
+                let mut play = None;
+                for (idx, player) in self.timings.iter_mut().enumerate() {
+                    ui.with_id(idx as i32, || {
+                        if ui.button(im_str!("X"), (30.0, 0.0)) {
+                            player.1 = true;
+                        }
+                        ui.same_line(0.0);
+                        ui.input_float2(im_str!(""), &mut player.0)
+                            .decimal_precision(2)
+                            .build();
+                        ui.same_line(0.0);
+                        if ui.button(im_str!("@>"), (35.0, 0.0)) {
+                            play = Some((player.0[0], player.0[1]));
+                        }
+                    });
+                }
+                play.map(|(x, y)| self.player.update(x, y));
+            });
+    }
+
     fn save(&self) {
         use std::io::Write;
 
         let data = AppData {
             lyrics: self.lyrics.to_str().to_owned(),
-            timings: self.timings.as_slice().to_vec(),
+            timings: self.timings.iter().map(|&(x, _)| (x[0], x[1])).collect(),
             path: self.path.to_str().to_owned()
         };
 
@@ -140,17 +149,15 @@ impl State {
         let mut file = File::open(SAVE_FILE).expect("Could not open file");
         let mut json = String::with_capacity(file.metadata().unwrap().len() as usize);
         file.read_to_string(&mut json).unwrap();
-        let data = serde_json::from_str::<AppData>(&json).expect("Invalid json file");
+        let mut data = serde_json::from_str::<AppData>(&json).expect("Invalid json file");
         let song = Song::new(data.path.as_str());
 
         self.lyrics = ImString::new(data.lyrics);
-        self.timings = data.timings;
+        self.timings = data.timings.drain(..).map(|(x, y)| ([x, y], false)).collect();
         self.path = ImString::new(data.path);
         self.song = Some(song.clone());
 
-        for x in &mut self.timings {
-            x.set_song(song.clone());
-        }
+        self.player.set_song(song);
     }
 }
 

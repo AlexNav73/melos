@@ -3,8 +3,6 @@ use rodio;
 use rodio::Source;
 use rodio::buffer::SamplesBuffer;
 
-use player::Player;
-
 use std::path::Path;
 use std::io::BufReader;
 use std::fs::File;
