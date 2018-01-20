@@ -4,24 +4,21 @@ use imgui::*;
 use support_gfx::AppContext;
 use song::Song;
 
-#[derive(Default)]
 pub struct Player {
     start: f32,
     end: f32,
-    song: Option<Song>,
+    song: Song,
     volume: f32
 }
 
 impl Player {
-    pub fn new() -> Self {
+    pub fn new(song: Song) -> Self {
         Player {
+            song,
             volume: 50.0,
-            .. Self::default()
+            start: 0.0,
+            end: 0.0
         }
-    }
-
-    pub fn set_song(&mut self, song: Song) {
-        self.song = Some(song);
     }
 
     pub fn update(&mut self, start: f32, end: f32) {
@@ -30,27 +27,19 @@ impl Player {
     }
 
     pub fn play(&self) {
-        if let Some(ref song) = self.song {
-            song.play((self.start(), self.duration()));
-        }
+        self.song.play((self.start(), self.duration()));
     }
 
     pub fn stop(&self) {
-        if let Some(ref song) = self.song {
-            song.stop();
-        }
+        self.song.stop();
     }
 
     pub fn pause(&self) {
-        if let Some(ref song) = self.song {
-            song.pause();
-        }
+        self.song.pause();
     }
 
     pub fn volume(&self, volume: f32) {
-        if let Some(ref song) = self.song {
-            song.volume(volume / 100.0);
-        }
+        self.song.volume(volume / 100.0);
     }
 
     fn start(&self) -> u32 {

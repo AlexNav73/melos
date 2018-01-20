@@ -58,8 +58,10 @@ enum SongMsg {
     Volume(f32)
 }
 
+type Sample = i16;
+
 struct SongThread {
-    samples: Vec<i16>,
+    samples: Vec<Sample>,
     sink: rodio::Sink,
     endpoint: rodio::Endpoint,
     samples_rate: u32,
@@ -68,7 +70,7 @@ struct SongThread {
 
 impl SongThread {
     fn new<P: AsRef<Path>>(path: P) -> Self {
-        let file = File::open(path).expect("Invalid file name");
+        let file = File::open(path.as_ref()).expect("Invalid file name");
         let endpoint = rodio::get_endpoints_list().next().unwrap();
         let sink = rodio::Sink::new(&endpoint);
         let decoder = rodio::Decoder::new(BufReader::new(file)).unwrap();
@@ -86,16 +88,12 @@ impl SongThread {
 
     fn play(&self, (start, duration): (u32, u32)) {
         if !self.sink.is_paused() {
-            let source = self.samples.iter()
-                .skip(self.channels as usize * self.samples_rate as usize * start as usize)
-                .take(self.channels as usize * self.samples_rate as usize * duration as usize)
-                .cloned()
-                .collect::<Vec<i16>>();
-            let source = SamplesBuffer::new(self.channels, self.samples_rate, source);
+            let source = self.take_part(start, duration);
             self.sink.append(source);
         }
         self.sink.play();
     }
+
 
     fn stop(&mut self) {
         self.sink = rodio::Sink::new(&self.endpoint);
@@ -117,6 +115,15 @@ impl SongThread {
             SongMsg::Volume(v) => self.volume(v),
             SongMsg::Open(_) => {}
         }
+    }
+
+    fn take_part(&self, start: u32, duration: u32) -> SamplesBuffer<Sample> {
+        let source = self.samples.iter()
+            .skip(self.channels as usize * self.samples_rate as usize * start as usize)
+            .take(self.channels as usize * self.samples_rate as usize * duration as usize)
+            .cloned()
+            .collect::<Vec<Sample>>();
+        SamplesBuffer::new(self.channels, self.samples_rate, source)
     }
 }
 
