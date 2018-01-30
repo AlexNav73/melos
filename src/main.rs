@@ -23,9 +23,9 @@ use support_gfx::AppContext;
 use main_window::MainWindow;
 use dialogs::{OpenFileDialog, SaveFileDialog, AppData};
 
-struct Program {
-    open_file_dialog: OpenFileDialog,
-    save_file_dialog: SaveFileDialog,
+pub struct Program {
+    //open_file_dialog: OpenFileDialog,
+    //save_file_dialog: SaveFileDialog,
     main_window: Option<MainWindow>,
 }
 
@@ -36,10 +36,10 @@ impl AppContext for Program {
             ui.menu(im_str!("File"))
                 .build(|| {
                     if ui.menu_item(im_str!("Save")).build() {
-                        self.save_file_dialog.opened = true;
+                        //self.save_file_dialog.opened = true;
                     }
                     if ui.menu_item(im_str!("Open")).build() {
-                        self.open_file_dialog.opened = true;
+                        //self.open_file_dialog.opened = true;
                     }
                     if ui.menu_item(im_str!("Exit")).build() {
                         opened = false;
@@ -47,14 +47,14 @@ impl AppContext for Program {
                 });
         });
 
-        self.open_file_dialog.show(ui);
-        self.save_file_dialog.show(ui);
+        //self.open_file_dialog.show(ui);
+        //self.save_file_dialog.show(ui, self);
 
-        if self.open_file_dialog.should_load() {
-            if let Ok(saved_state) = self.open_file_dialog.open() {
-                self.main_window = Some(MainWindow::new(saved_state));
-            }
-        }
+        //if self.open_file_dialog.should_load() {
+            //if let Ok(saved_state) = self.open_file_dialog.open() {
+                //self.main_window = Some(MainWindow::new(saved_state));
+            //}
+        //}
         let mut main_window_opened = false;
         if let Some(ref mut main_window) = self.main_window {
             main_window_opened = main_window.show(ui);
@@ -68,17 +68,15 @@ impl AppContext for Program {
 
 impl Program {
     fn new() -> Self {
-        let prog = Program {
-            save_file_dialog: SaveFileDialog::new(),
-            open_file_dialog: OpenFileDialog::new(),
-            main_window: None
-        };
-        prog.save_file_dialog.add_event(prog.on_save());
-        prog
+        Program {
+            //save_file_dialog: SaveFileDialog::new(Program::on_save),
+            //open_file_dialog: OpenFileDialog::new(),
+            main_window: Some(MainWindow::new())
+        }
     }
 
-    fn on_save(&self) -> Box<Fn() -> Option<AppData>> {
-        Box::new(move || self.main_window.map(|x| x.on_save()))
+    fn on_save(&self) -> Option<AppData> {
+        self.main_window.as_ref().map(|x| x.on_save())
     }
 }
 

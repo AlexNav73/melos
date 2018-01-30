@@ -5,6 +5,7 @@ use imgui::*;
 use std::fs::File;
 use std::path::Path;
 
+use ::Program;
 use support_gfx::AppContext;
 
 #[derive(Serialize, Deserialize)]
@@ -69,15 +70,26 @@ impl OpenFileDialog {
     }
 }
 
+type SaveFn = fn(&Program) -> Option<AppData>;
+
 pub struct SaveFileDialog {
     pub opened: bool,
     saved: bool,
     path: ImString,
-    callback: Option<Box<Fn() -> Option<AppData>>>
+    on_save: SaveFn
 }
 
-impl AppContext for SaveFileDialog {
-    fn show<'a>(&mut self, ui: &Ui<'a>) -> bool {
+impl SaveFileDialog {
+    pub fn new(callback: SaveFn) -> Self {
+        SaveFileDialog {
+            opened: false,
+            saved: false,
+            path: ImString::with_capacity(256),
+            on_save: callback
+        }
+    }
+
+    pub fn show<'a>(&mut self, ui: &Ui<'a>, prog: &Program) -> bool {
         let mut opened = self.opened;
         if opened {
             ui.window(im_str!("Save File"))
@@ -88,29 +100,14 @@ impl AppContext for SaveFileDialog {
                     ui.input_text(im_str!("path"), &mut self.path)
                         .build();
                     if ui.button(im_str!("save"), (0.0, 0.0)) {
-                        if let Some(save_data) = (self.callback.unwrap())() {
-                            self.save(save_data);
+                        if let Some(data) = (self.on_save)(prog) {
+                            self.save(data);
                         }
                     }
                 });
         }
         self.opened = !(self.saved || !opened);
         self.opened
-    }
-}
-
-impl SaveFileDialog {
-    pub fn new() -> Self {
-        SaveFileDialog {
-            opened: false,
-            saved: false,
-            path: ImString::with_capacity(256),
-            callback: None
-        }
-    }
-
-    pub fn add_event<E>(&mut self, e: Box<E>) where E: Fn() -> Option<AppData> {
-        self.callback = Some(e);
     }
 
     fn save(&mut self, save_sate: AppData) {

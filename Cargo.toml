@@ -4,7 +4,6 @@ version = "0.1.0"
 authors = ["AlexNav73 <fifthhorseman@mail.ru>"]
 
 [dependencies]
-rodio = "*"
 gfx = "0.16.1"
 gfx_window_glutin = "0.18"
 glutin = "0.10.1"
@@ -13,3 +12,9 @@ imgui-gfx-renderer = { git = "https://github.com/AlexNav73/imgui-rs.git" }
 serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
+
+[dependencies.rodio]
+git = "https://github.com/AlexNav73/rodio.git"
+branch = "mp3"
+default-features = false
+features = ["mp3"]

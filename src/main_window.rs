@@ -1,7 +1,6 @@
 
 use imgui::*;
 
-use song::Song;
 use player::Player;
 use support_gfx::AppContext;
 use dialogs::AppData;
@@ -10,7 +9,6 @@ pub struct MainWindow {
     lyrics: ImString,
     timings: Vec<([f32; 2], bool)>,
     path: ImString,
-    song: Song,
     player: Player,
 }
 
@@ -21,14 +19,25 @@ impl AppContext for MainWindow {
 }
 
 impl MainWindow {
-    pub fn new(mut saved_state: AppData) -> Self {
-        let song = Song::new(saved_state.path.as_str());
+    pub fn new() -> Self {
+        let player = Player::new();
+        player.open("D:\\Programms\\Rust\\melos\\samples\\Ozzy Osbourne - Let It Die.mp3");
+        MainWindow {
+            lyrics: ImString::with_capacity(1000),
+            timings: Vec::new(),
+            path: ImString::with_capacity(256),
+            player
+        }
+    }
+
+    pub fn load(mut saved_state: AppData) -> Self {
+        let player = Player::new();
+        player.open(saved_state.path.as_str());
         MainWindow {
             lyrics: ImString::new(saved_state.lyrics),
             path: ImString::new(saved_state.path),
             timings: saved_state.timings.drain(..).map(|(x, y)| ([x, y], false)).collect(),
-            song: song.clone(),
-            player: Player::new(song),
+            player
         }
     }
 
@@ -48,7 +57,7 @@ impl MainWindow {
                 ui.same_line(0.0);
                 if ui.button(im_str!("open"), (0.0, 0.0)) {
                     self.timings = Vec::new();
-                    self.song = Song::new(self.path.to_str());
+                    self.player.open(self.path.to_str());
                 }
                 if ui.button(im_str!("+"), (0.0, 0.0)) {
                     self.timings.push(([0.0, 0.0], false));

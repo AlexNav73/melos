@@ -2,7 +2,7 @@
 use imgui::*;
 
 use support_gfx::AppContext;
-use song::Song;
+use song::{Song, TimeSpan};
 
 pub struct Player {
     start: f32,
@@ -12,9 +12,9 @@ pub struct Player {
 }
 
 impl Player {
-    pub fn new(song: Song) -> Self {
+    pub fn new() -> Self {
         Player {
-            song,
+            song: Song::new(),
             volume: 50.0,
             start: 0.0,
             end: 0.0
@@ -26,8 +26,12 @@ impl Player {
         self.end = end;
     }
 
+    pub fn open<P: ToString>(&self, path: P) {
+        self.song.open(path);
+    }
+
     pub fn play(&self) {
-        self.song.play((self.start(), self.duration()));
+        self.song.play(TimeSpan::new(self.start(), self.duration()));
     }
 
     pub fn stop(&self) {
@@ -38,8 +42,8 @@ impl Player {
         self.song.pause();
     }
 
-    pub fn volume(&self, volume: f32) {
-        self.song.volume(volume / 100.0);
+    pub fn volume(&mut self) {
+        self.song.volume(self.volume / 100.0);
     }
 
     fn start(&self) -> u32 {
@@ -64,7 +68,7 @@ impl AppContext for Player {
                 ui.slider_float(im_str!("volume"), &mut self.volume, 0.0, 100.0)
                     .display_format(im_str!("%.0f"))
                     .build();
-                self.volume(self.volume);
+                self.volume();
                 if ui.button(im_str!("play"), (0.0, 0.0)) {
                     self.play();
                 }
