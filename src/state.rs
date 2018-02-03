@@ -15,6 +15,7 @@ struct InnerState {
 pub struct State(Rc<RefCell<InnerState>>);
 
 impl State {
+    #[inline]
     pub fn new() -> Self {
         State(Rc::new(RefCell::new(InnerState {
             lyrics: ImString::with_capacity(1000),
@@ -23,6 +24,7 @@ impl State {
         })))
     }
 
+    #[inline]
     pub fn to_app_data(&self) -> AppData {
         let this = self.0.borrow();
         AppData {
@@ -32,6 +34,7 @@ impl State {
         }
     }
 
+    #[inline]
     pub fn update_from_app_data(&self, mut saved_state: AppData) {
         let mut this = self.0.borrow_mut();
         this.lyrics = ImString::with_capacity(10000);
@@ -41,22 +44,27 @@ impl State {
         this.timings = saved_state.timings.drain(..).map(|(x, y)| ([x, y], false)).collect();
     }
 
+    #[inline]
     pub fn lyrics_mut<'a>(&'a mut self) -> RefMut<'a, ImString> {
         RefMut::map(self.0.borrow_mut(), |x| &mut x.lyrics)
     }
 
+    #[inline]
     pub fn timings_mut<'a>(&'a mut self) -> RefMut<'a, Vec<([f32; 2], bool)>> {
         RefMut::map(self.0.borrow_mut(), |x| &mut x.timings)
     }
 
+    #[inline]
     pub fn clean_timings(&self) {
         self.0.borrow_mut().timings.clear();
     }
 
+    #[inline]
     pub fn path<'a>(&'a self) -> Ref<'a, ImString> {
         Ref::map(self.0.borrow(), |x| &x.path)
     }
 
+    #[inline]
     pub fn path_mut<'a>(&'a mut self) -> RefMut<'a, ImString> {
         RefMut::map(self.0.borrow_mut(), |x| &mut x.path)
     }
