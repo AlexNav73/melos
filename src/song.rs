@@ -17,8 +17,6 @@ type Sample = i16;
 
 pub struct Song {
     controls: Arc<Controls>,
-    queue_tx: Arc<queue::SourcesQueueInput<f32>>,
-    sleep_until_end: Arc<Mutex<Option<Receiver<()>>>>,
 }
 
 struct Controls {
@@ -95,13 +93,7 @@ impl TimeSpan {
 
 impl Song {
     pub fn new() -> Self {
-        let endpoint = rodio::get_endpoints_list().next().unwrap();
-        let (queue_tx, queue_rx) = queue::queue(true);
-        rodio::play_raw(&endpoint, queue_rx);
-
-        let controls = Arc::new(Controls::new());
-
-        Song { controls, queue_tx, sleep_until_end: Arc::new(Mutex::new(None)) }
+        Song { controls: Arc::new(Controls::new()) }
     }
 
     pub fn open<P: ToString>(&self, path: P) {
@@ -109,8 +101,6 @@ impl Song {
 
         let path = path.to_string();
         let controls = self.controls.clone();
-        let queue = self.queue_tx.clone();
-        let sleep_until_end = self.sleep_until_end.clone();
 
         thread::spawn(move || {
             let file = File::open(path).expect("Invalid file name");
@@ -130,17 +120,11 @@ impl Song {
                 })
                 .convert_samples();
 
-            *sleep_until_end.lock().unwrap() = Some(queue.append_with_signal(source));
+            let endpoint = rodio::get_endpoints_list().next().unwrap();
+            rodio::play_raw(&endpoint, source);
 
             println!("Song has been loaded");
         });
-    }
-
-    #[inline]
-    pub fn sleep_until_end(&self) {
-        if let Some(sleep_until_end) = self.sleep_until_end.lock().unwrap().take() {
-            let _ = sleep_until_end.recv();
-        }
     }
 
     #[inline]
@@ -288,7 +272,6 @@ impl Source for TestSource {
 impl Drop for Song {
     #[inline]
     fn drop(&mut self) {
-        self.queue_tx.set_keep_alive_if_empty(false);
         self.controls.stopped.store(true, Ordering::Relaxed);
     }
 }

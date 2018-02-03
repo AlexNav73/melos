@@ -42,7 +42,7 @@ impl Player {
         self.song.pause();
     }
 
-    pub fn volume(&mut self) {
+    pub fn update_volume(&mut self) {
         self.song.volume(self.volume / 100.0);
     }
 
@@ -68,7 +68,7 @@ impl AppContext for Player {
                 ui.slider_float(im_str!("volume"), &mut self.volume, 0.0, 100.0)
                     .display_format(im_str!("%.0f"))
                     .build();
-                self.volume();
+                self.update_volume();
                 if ui.button(im_str!("play"), (0.0, 0.0)) {
                     self.play();
                 }
