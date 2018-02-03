@@ -16,16 +16,22 @@ mod player;
 mod support_gfx;
 mod main_window;
 mod dialogs;
+mod state;
+
+use std::rc::Rc;
+use std::cell::RefCell;
 
 use imgui::*;
 
+use state::State;
 use support_gfx::AppContext;
 use main_window::MainWindow;
 use dialogs::{OpenFileDialog, SaveFileDialog, AppData};
 
 pub struct Program {
-    //open_file_dialog: OpenFileDialog,
-    //save_file_dialog: SaveFileDialog,
+    state: Rc<RefCell<State>>,
+    open_file_dialog: OpenFileDialog,
+    save_file_dialog: SaveFileDialog,
     main_window: Option<MainWindow>,
 }
 
@@ -36,10 +42,10 @@ impl AppContext for Program {
             ui.menu(im_str!("File"))
                 .build(|| {
                     if ui.menu_item(im_str!("Save")).build() {
-                        //self.save_file_dialog.opened = true;
+                        self.save_file_dialog.opened = true;
                     }
                     if ui.menu_item(im_str!("Open")).build() {
-                        //self.open_file_dialog.opened = true;
+                        self.open_file_dialog.opened = true;
                     }
                     if ui.menu_item(im_str!("Exit")).build() {
                         opened = false;
@@ -47,14 +53,12 @@ impl AppContext for Program {
                 });
         });
 
-        //self.open_file_dialog.show(ui);
-        //self.save_file_dialog.show(ui, self);
+        self.open_file_dialog.show(ui);
+        self.save_file_dialog.show(ui);
 
-        //if self.open_file_dialog.should_load() {
-            //if let Ok(saved_state) = self.open_file_dialog.open() {
-                //self.main_window = Some(MainWindow::new(saved_state));
-            //}
-        //}
+        if self.open_file_dialog.should_load() {
+            self.main_window = Some(MainWindow::new(self.state.clone()));
+        }
         let mut main_window_opened = false;
         if let Some(ref mut main_window) = self.main_window {
             main_window_opened = main_window.show(ui);
@@ -68,15 +72,13 @@ impl AppContext for Program {
 
 impl Program {
     fn new() -> Self {
+        let state = Rc::new(RefCell::new(State::new()));
         Program {
-            //save_file_dialog: SaveFileDialog::new(Program::on_save),
-            //open_file_dialog: OpenFileDialog::new(),
-            main_window: Some(MainWindow::new())
+            state: state.clone(),
+            save_file_dialog: SaveFileDialog::new(state.clone()),
+            open_file_dialog: OpenFileDialog::new(state),
+            main_window: None,
         }
-    }
-
-    fn on_save(&self) -> Option<AppData> {
-        self.main_window.as_ref().map(|x| x.on_save())
     }
 }
 

@@ -4,9 +4,12 @@ use imgui::*;
 
 use std::fs::File;
 use std::path::Path;
+use std::rc::Rc;
+use std::cell::RefCell;
 
 use ::Program;
 use support_gfx::AppContext;
+use state::State;
 
 #[derive(Serialize, Deserialize)]
 pub struct AppData {
@@ -19,6 +22,7 @@ pub struct OpenFileDialog {
     pub opened: bool,
     load: bool,
     path: ImString,
+    state: Rc<RefCell<State>>
 }
 
 impl AppContext for OpenFileDialog {
@@ -33,8 +37,11 @@ impl AppContext for OpenFileDialog {
                     ui.input_text(im_str!("path"), &mut self.path)
                         .build();
                     if ui.button(im_str!("open"), (0.0, 0.0)) {
-                        let file = Path::new(self.path.to_str());
-                        self.load = file.exists() && file.is_file();
+                        self.load = false;
+                        if let Ok(data) = self.open(self.path.to_str()) {
+                            self.state.borrow_mut().update_from_app_data(data);
+                            self.load = true;
+                        }
                     }
                 });
         }
@@ -44,21 +51,13 @@ impl AppContext for OpenFileDialog {
 }
 
 impl OpenFileDialog {
-    pub fn new() -> Self {
+    pub fn new(state: Rc<RefCell<State>>) -> Self {
         OpenFileDialog {
             opened: false,
             load: false,
-            path: ImString::with_capacity(256)
+            path: ImString::with_capacity(256),
+            state
         }
-    }
-
-    pub fn open(&mut self) -> Result<AppData, ()> {
-        use std::io::Read;
-
-        let mut file = File::open(self.path.to_str()).map_err(|_| ())?;
-        let mut json = String::with_capacity(file.metadata().unwrap().len() as usize);
-        file.read_to_string(&mut json).unwrap();
-        Ok(serde_json::from_str::<AppData>(&json).expect("Invalid json file"))
     }
 
     pub fn should_load(&mut self) -> bool {
@@ -68,28 +67,35 @@ impl OpenFileDialog {
         }
         false
     }
-}
 
-type SaveFn = fn(&Program) -> Option<AppData>;
+    fn open<P: AsRef<Path>>(&self, path: P) -> Result<AppData, ()> {
+        use std::io::Read;
+
+        let mut file = File::open(path.as_ref()).map_err(|_| ())?;
+        let mut json = String::with_capacity(file.metadata().unwrap().len() as usize);
+        file.read_to_string(&mut json).map_err(|_| ())?;
+        serde_json::from_str::<AppData>(&json).map_err(|_| ())
+    }
+}
 
 pub struct SaveFileDialog {
     pub opened: bool,
     saved: bool,
     path: ImString,
-    on_save: SaveFn
+    state: Rc<RefCell<State>>
 }
 
 impl SaveFileDialog {
-    pub fn new(callback: SaveFn) -> Self {
+    pub fn new(state: Rc<RefCell<State>>) -> Self {
         SaveFileDialog {
             opened: false,
             saved: false,
             path: ImString::with_capacity(256),
-            on_save: callback
+            state
         }
     }
 
-    pub fn show<'a>(&mut self, ui: &Ui<'a>, prog: &Program) -> bool {
+    pub fn show<'a>(&mut self, ui: &Ui<'a>) -> bool {
         let mut opened = self.opened;
         if opened {
             ui.window(im_str!("Save File"))
@@ -100,9 +106,10 @@ impl SaveFileDialog {
                     ui.input_text(im_str!("path"), &mut self.path)
                         .build();
                     if ui.button(im_str!("save"), (0.0, 0.0)) {
-                        if let Some(data) = (self.on_save)(prog) {
-                            self.save(data);
-                        }
+                        let data = {
+                            self.state.borrow().to_app_data()
+                        };
+                        self.save(data);
                     }
                 });
         }

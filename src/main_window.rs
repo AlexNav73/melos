@@ -1,14 +1,16 @@
 
+use std::rc::Rc;
+use std::cell::RefCell;
+
 use imgui::*;
 
 use player::Player;
 use support_gfx::AppContext;
 use dialogs::AppData;
+use state::State;
 
 pub struct MainWindow {
-    lyrics: ImString,
-    timings: Vec<([f32; 2], bool)>,
-    path: ImString,
+    state: Rc<RefCell<State>>,
     player: Player,
 }
 
@@ -19,25 +21,12 @@ impl AppContext for MainWindow {
 }
 
 impl MainWindow {
-    pub fn new() -> Self {
+    pub fn new(state: Rc<RefCell<State>>) -> Self {
         let player = Player::new();
-        player.open("D:\\Programms\\Rust\\melos\\samples\\From Ashes to New - Stay This Way.mp3");
+        player.open(state.borrow().path().to_str());
         MainWindow {
-            lyrics: ImString::with_capacity(1000),
-            timings: Vec::new(),
-            path: ImString::with_capacity(256),
-            player
-        }
-    }
-
-    pub fn load(mut saved_state: AppData) -> Self {
-        let player = Player::new();
-        player.open(saved_state.path.as_str());
-        MainWindow {
-            lyrics: ImString::new(saved_state.lyrics),
-            path: ImString::new(saved_state.path),
-            timings: saved_state.timings.drain(..).map(|(x, y)| ([x, y], false)).collect(),
-            player
+            player,
+            state
         }
     }
 
@@ -49,25 +38,25 @@ impl MainWindow {
             .collapsible(false)
             .build(|| {
                 ui.columns(2, im_str!("container"), false);
-                ui.input_text(im_str!(""), &mut self.lyrics)
-                    .multiline(ImVec2::new(400.0, 530.0))
+                ui.input_text(im_str!(""), self.state.borrow_mut().lyrics_mut())
+                    .multiline(ImVec2::new(700.0, 530.0))
                     .build();
                 ui.next_column();
-                ui.input_text(im_str!("song"), &mut self.path).build();
+                ui.input_text(im_str!("song"), self.state.borrow_mut().path_mut()).build();
                 ui.same_line(0.0);
                 if ui.button(im_str!("open"), (0.0, 0.0)) {
-                    self.timings = Vec::new();
-                    self.player.open(self.path.to_str());
+                    self.state.borrow_mut().clean_timings();
+                    self.player.open(self.state.borrow().path().to_str());
                 }
                 if ui.button(im_str!("+"), (0.0, 0.0)) {
-                    self.timings.push(([0.0, 0.0], false));
+                    self.state.borrow_mut().timings_mut().push(([0.0, 0.0], false));
                 }
                 self.show_quatrains(ui);
                 ui.spacing();
                 self.player.show(ui);
             });
 
-        self.timings.retain(|x| !x.1);
+        self.state.borrow_mut().timings_mut().retain(|x| !x.1);
 
         opened
     }
@@ -78,7 +67,7 @@ impl MainWindow {
             .show_borders(true)
             .build(|| {
                 let mut play = None;
-                for (idx, player) in self.timings.iter_mut().enumerate() {
+                for (idx, player) in self.state.borrow_mut().timings_mut().iter_mut().enumerate() {
                     ui.with_id(idx as i32, || {
                         if ui.button(im_str!("X"), (30.0, 0.0)) {
                             player.1 = true;
@@ -95,13 +84,5 @@ impl MainWindow {
                 }
                 play.map(|(x, y)| self.player.update(x, y));
             });
-    }
-
-    pub fn on_save(&self) -> AppData {
-        AppData {
-            lyrics: self.lyrics.to_str().to_owned(),
-            timings: self.timings.iter().map(|&(x, _)| (x[0], x[1])).collect(),
-            path: self.path.to_str().to_owned()
-        }
     }
 }
