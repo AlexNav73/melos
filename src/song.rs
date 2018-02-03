@@ -28,13 +28,66 @@ struct Controls {
     volume: Mutex<f32>,
 }
 
-#[derive(Copy, Clone)]
+impl Controls {
+    #[inline]
+    fn new() -> Self {
+        Controls {
+            stopped: false.into(),
+            paused: false.into(),
+            time: Mutex::new(TimeSpan::default()),
+            volume: Mutex::new(1.0),
+        }
+    }
+
+    #[inline]
+    fn stopped(&self) -> bool {
+        self.stopped.load(Ordering::SeqCst)
+    }
+
+    #[inline]
+    fn set_stopped(&self, value: bool) {
+        self.stopped.store(value, Ordering::SeqCst);
+    }
+
+    #[inline]
+    fn paused(&self) -> bool {
+        self.paused.load(Ordering::SeqCst)
+    }
+
+    #[inline]
+    fn set_paused(&self, value: bool) {
+        self.paused.store(value, Ordering::SeqCst);
+    }
+
+    #[inline]
+    fn volume(&self) -> f32 {
+        *self.volume.lock().unwrap()
+    }
+
+    #[inline]
+    fn set_volume(&self, value: f32) {
+        *self.volume.lock().unwrap() = value;
+    }
+
+    #[inline]
+    fn time(&self) -> TimeSpan {
+        *self.time.lock().unwrap()
+    }
+
+    #[inline]
+    fn set_time(&self, value: TimeSpan) {
+        *self.time.lock().unwrap() = value;
+    }
+}
+
+#[derive(Copy, Clone, Default)]
 pub struct TimeSpan {
     start: u32,
     duration: u32
 }
 
 impl TimeSpan {
+    #[inline]
     pub fn new(start: u32, duration: u32) -> Self {
         TimeSpan { start, duration }
     }
@@ -46,12 +99,7 @@ impl Song {
         let (queue_tx, queue_rx) = queue::queue(true);
         rodio::play_raw(&endpoint, queue_rx);
 
-        let controls = Arc::new(Controls {
-            stopped: false.into(),
-            paused: false.into(),
-            time: Mutex::new(TimeSpan { start: 0, duration: 0 }),
-            volume: Mutex::new(1.0),
-        });
+        let controls = Arc::new(Controls::new());
 
         Song { controls, queue_tx, sleep_until_end: Arc::new(Mutex::new(None)) }
     }
@@ -71,18 +119,14 @@ impl Song {
             let samples_rate = decoder.samples_rate();
             let channels = decoder.channels();
             let samples = decoder.collect::<Vec<_>>();
-            let duration_ns = 1_000_000_000u64.checked_mul(samples.len() as u64).unwrap() /
-                samples_rate as u64 / channels as u64;
-            let duration = Duration::new(duration_ns / 1_000_000_000,
-                                         (duration_ns % 1_000_000_000) as u32);
 
-            let source = TestSource::new(channels, samples_rate, duration, samples)
+            let source = TestSource::new(channels, samples_rate, samples, controls.clone())
                 .amplify(1.0)
                 .periodic_access(Duration::from_millis(5), move |src| {
-                    src.inner_mut().stop(controls.stopped.load(Ordering::SeqCst));
-                    src.inner_mut().pause(controls.paused.load(Ordering::SeqCst));
-                    src.inner_mut().play(*controls.time.lock().unwrap());
-                    src.set_factor(*controls.volume.lock().unwrap());
+                    src.inner_mut().stop(controls.stopped());
+                    src.inner_mut().pause(controls.paused());
+                    src.inner_mut().play(controls.time());
+                    src.set_factor(controls.volume());
                 })
                 .convert_samples();
 
@@ -101,24 +145,24 @@ impl Song {
 
     #[inline]
     pub fn play(&self, time: TimeSpan) {
-        *self.controls.time.lock().unwrap() = time;
-        self.controls.stopped.store(false, Ordering::SeqCst);
-        self.controls.paused.store(false, Ordering::SeqCst);
+        self.controls.set_time(time);
+        self.controls.set_stopped(false);
+        self.controls.set_paused(false);
     }
 
     #[inline]
     pub fn stop(&self) {
-        self.controls.stopped.store(true, Ordering::SeqCst);
+        self.controls.set_stopped(true);
     }
 
     #[inline]
     pub fn pause(&self) {
-        self.controls.paused.store(true, Ordering::SeqCst);
+        self.controls.set_paused(true);
     }
 
     #[inline]
-    pub fn volume(&mut self, volume: f32) {
-        *self.controls.volume.lock().unwrap() = volume;
+    pub fn volume(&mut self, value: f32) {
+        self.controls.set_volume(value);
     }
 }
 
@@ -128,27 +172,32 @@ struct TestSource {
     current: usize,
     stopped: bool,
     paused: bool,
-    debug: bool,
     source: Vec<Sample>,
     channels: u16,
     samples_rate: u32,
-    duration: Duration
+    duration: Duration,
+    controls: Arc<Controls>
 }
 
 impl TestSource {
     #[inline]
-    fn new(channels: u16, samples_rate: u32, duration: Duration, source: Vec<Sample>) -> Self {
+    fn new(channels: u16, samples_rate: u32, source: Vec<Sample>, controls: Arc<Controls>) -> Self {
+        let duration_ns = 1_000_000_000u64.checked_mul(source.len() as u64).unwrap() /
+            samples_rate as u64 / channels as u64;
+        let duration = Duration::new(duration_ns / 1_000_000_000,
+                                     (duration_ns % 1_000_000_000) as u32);
+
         TestSource {
+            channels,
+            samples_rate,
+            duration,
+            source,
+            controls,
             start: 0,
             end: 0,
             current: 0,
             stopped: false,
             paused: false,
-            debug: false,
-            source,
-            channels,
-            samples_rate,
-            duration
         }
     }
 
@@ -194,20 +243,16 @@ impl Iterator for TestSource {
     fn next(&mut self) -> Option<Self::Item> {
         use rodio::Sample as _Sample;
 
-        if self.current % 15 == 0 {
-            println!("{:?}", self);
-        }
-
         if self.paused {
             return Some(Sample::zero_value());
         } else if self.stopped {
             self.current = self.start;
             return Some(Sample::zero_value());
         } else if self.current < self.end {
-            let ret = self.source.get(self.current).cloned();
             self.current += 1;
-            return ret;
+            self.source.get(self.current - 1).cloned()
         } else {
+            self.controls.set_stopped(true);
             return Some(Sample::zero_value());
         }
     }

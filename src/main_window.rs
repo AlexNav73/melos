@@ -21,7 +21,7 @@ impl AppContext for MainWindow {
 impl MainWindow {
     pub fn new() -> Self {
         let player = Player::new();
-        player.open("D:\\Programms\\Rust\\melos\\samples\\Ozzy Osbourne - Let It Die.mp3");
+        player.open("D:\\Programms\\Rust\\melos\\samples\\From Ashes to New - Stay This Way.mp3");
         MainWindow {
             lyrics: ImString::with_capacity(1000),
             timings: Vec::new(),
