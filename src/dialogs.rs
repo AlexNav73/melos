@@ -4,10 +4,7 @@ use imgui::*;
 
 use std::fs::File;
 use std::path::Path;
-use std::rc::Rc;
-use std::cell::RefCell;
 
-use ::Program;
 use support_gfx::AppContext;
 use state::State;
 
@@ -22,7 +19,7 @@ pub struct OpenFileDialog {
     pub opened: bool,
     load: bool,
     path: ImString,
-    state: Rc<RefCell<State>>
+    state: State
 }
 
 impl AppContext for OpenFileDialog {
@@ -39,7 +36,7 @@ impl AppContext for OpenFileDialog {
                     if ui.button(im_str!("open"), (0.0, 0.0)) {
                         self.load = false;
                         if let Ok(data) = self.open(self.path.to_str()) {
-                            self.state.borrow_mut().update_from_app_data(data);
+                            self.state.update_from_app_data(data);
                             self.load = true;
                         }
                     }
@@ -51,7 +48,7 @@ impl AppContext for OpenFileDialog {
 }
 
 impl OpenFileDialog {
-    pub fn new(state: Rc<RefCell<State>>) -> Self {
+    pub fn new(state: State) -> Self {
         OpenFileDialog {
             opened: false,
             load: false,
@@ -82,11 +79,11 @@ pub struct SaveFileDialog {
     pub opened: bool,
     saved: bool,
     path: ImString,
-    state: Rc<RefCell<State>>
+    state: State
 }
 
 impl SaveFileDialog {
-    pub fn new(state: Rc<RefCell<State>>) -> Self {
+    pub fn new(state: State) -> Self {
         SaveFileDialog {
             opened: false,
             saved: false,
@@ -107,7 +104,7 @@ impl SaveFileDialog {
                         .build();
                     if ui.button(im_str!("save"), (0.0, 0.0)) {
                         let data = {
-                            self.state.borrow().to_app_data()
+                            self.state.to_app_data()
                         };
                         self.save(data);
                     }

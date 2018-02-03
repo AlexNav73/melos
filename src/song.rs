@@ -1,17 +1,13 @@
 
 use rodio;
 use rodio::Source;
-use rodio::queue;
-use rodio::buffer::SamplesBuffer;
 
 use std::fmt;
 use std::fs::File;
-use std::path::Path;
 use std::io::BufReader;
 use std::time::Duration;
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::{AtomicUsize, AtomicBool, Ordering};
-use std::sync::mpsc::Receiver;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 type Sample = i16;
 
@@ -96,6 +92,7 @@ impl Song {
         Song { controls: Arc::new(Controls::new()) }
     }
 
+    #[allow(deprecated)]
     pub fn open<P: ToString>(&self, path: P) {
         use std::thread;
 

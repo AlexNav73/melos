@@ -18,18 +18,15 @@ mod main_window;
 mod dialogs;
 mod state;
 
-use std::rc::Rc;
-use std::cell::RefCell;
-
 use imgui::*;
 
 use state::State;
 use support_gfx::AppContext;
 use main_window::MainWindow;
-use dialogs::{OpenFileDialog, SaveFileDialog, AppData};
+use dialogs::{OpenFileDialog, SaveFileDialog};
 
 pub struct Program {
-    state: Rc<RefCell<State>>,
+    state: State,
     open_file_dialog: OpenFileDialog,
     save_file_dialog: SaveFileDialog,
     main_window: Option<MainWindow>,
@@ -72,7 +69,7 @@ impl AppContext for Program {
 
 impl Program {
     fn new() -> Self {
-        let state = Rc::new(RefCell::new(State::new()));
+        let state = State::new();
         Program {
             state: state.clone(),
             save_file_dialog: SaveFileDialog::new(state.clone()),
