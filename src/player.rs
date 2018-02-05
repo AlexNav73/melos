@@ -2,23 +2,26 @@
 use imgui::*;
 
 use support_gfx::AppContext;
+use state::State;
 use song::{Song, TimeSpan};
 
 pub struct Player {
+    song: Song,
+    state: State,
     start: f32,
     end: f32,
-    song: Song,
     volume: f32
 }
 
 impl Player {
     #[inline]
-    pub fn new() -> Self {
+    pub fn new(state: State) -> Self {
         Player {
             song: Song::new(),
             volume: 50.0,
             start: 0.0,
-            end: 0.0
+            end: 0.0,
+            state,
         }
     }
 
@@ -69,6 +72,13 @@ impl Player {
         let begin = self.song.progress().checked_sub(start).unwrap_or(start);
         begin as f32 / self.duration() as f32
     }
+
+    #[inline]
+    fn log_load_status(&mut self) {
+        if self.song.loaded() {
+            self.state.log("Song was loaded".into());
+        }
+    }
 }
 
 fn to_s(time: f32) -> u32 {
@@ -112,6 +122,7 @@ impl AppContext for Player {
             });
 
         self.update_volume();
+        self.log_load_status();
 
         true
     }

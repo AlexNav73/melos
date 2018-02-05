@@ -9,6 +9,7 @@ struct InnerState {
     lyrics: ImString,
     timings: Vec<([f32; 2], bool)>,
     path: ImString,
+    logs: Vec<String>,
 }
 
 #[derive(Clone)]
@@ -21,6 +22,7 @@ impl State {
             lyrics: ImString::with_capacity(1000),
             timings: Vec::new(),
             path: ImString::with_capacity(256),
+            logs: Vec::new(),
         })))
     }
 
@@ -67,5 +69,15 @@ impl State {
     #[inline]
     pub fn path_mut<'a>(&'a mut self) -> RefMut<'a, ImString> {
         RefMut::map(self.0.borrow_mut(), |x| &mut x.path)
+    }
+
+    #[inline]
+    pub fn logs<'a>(&'a self) -> Ref<'a, [String]> {
+        Ref::map(self.0.borrow(), |x| x.logs.as_slice())
+    }
+
+    #[inline]
+    pub fn log(&mut self, log: String) {
+        self.0.borrow_mut().logs.push(log);
     }
 }

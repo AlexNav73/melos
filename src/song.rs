@@ -20,7 +20,8 @@ struct Controls {
     paused: AtomicBool,
     time: Mutex<TimeSpan>,
     volume: Mutex<f32>,
-    progress: Mutex<u32>
+    progress: Mutex<u32>,
+    loaded: AtomicBool
 }
 
 impl Controls {
@@ -31,7 +32,8 @@ impl Controls {
             paused: false.into(),
             time: Mutex::new(TimeSpan::default()),
             volume: Mutex::new(1.0),
-            progress: Mutex::new(0)
+            progress: Mutex::new(0),
+            loaded: false.into()
         }
     }
 
@@ -84,6 +86,11 @@ impl Controls {
     fn set_progress(&self, value: u32) {
         *self.progress.lock().unwrap() = value;
     }
+
+    #[inline]
+    fn loaded(&self) -> bool {
+        self.loaded.swap(false, Ordering::SeqCst)
+    }
 }
 
 #[derive(Copy, Clone, Default)]
@@ -119,6 +126,7 @@ impl Song {
             let channels = decoder.channels();
             let samples = decoder.collect::<Vec<_>>();
             let controls2 = controls.clone();
+            let controls3 = controls.clone();
 
             let source = SmartSource::new(channels, samples_rate, samples, controls.clone())
                 .amplify(1.0)
@@ -136,7 +144,7 @@ impl Song {
             let endpoint = rodio::get_endpoints_list().next().unwrap();
             rodio::play_raw(&endpoint, source);
 
-            println!("Song has been loaded");
+            controls3.loaded.store(true, Ordering::SeqCst);
         });
     }
 
@@ -165,6 +173,11 @@ impl Song {
     #[inline]
     pub fn progress(&self) -> u32 {
         self.controls.progress()
+    }
+
+    #[inline]
+    pub fn loaded(&self) -> bool {
+        self.controls.loaded()
     }
 }
 

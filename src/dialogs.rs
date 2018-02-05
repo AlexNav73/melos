@@ -121,4 +121,3 @@ impl SaveFileDialog {
         file.write(serde_json::to_string(&save_sate).unwrap().as_bytes()).unwrap();
     }
 }
-

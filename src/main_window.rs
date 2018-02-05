@@ -4,10 +4,12 @@ use imgui::*;
 use player::Player;
 use support_gfx::AppContext;
 use state::State;
+use console::Console;
 
 pub struct MainWindow {
     state: State,
     player: Player,
+    console: Console
 }
 
 impl AppContext for MainWindow {
@@ -18,11 +20,12 @@ impl AppContext for MainWindow {
 
 impl MainWindow {
     pub fn new(state: State) -> Self {
-        let player = Player::new();
+        let player = Player::new(state.clone());
         player.open(state.path().to_str());
         MainWindow {
+            console: Console::new(state.clone()),
             player,
-            state
+            state,
         }
     }
 
@@ -50,6 +53,7 @@ impl MainWindow {
                 self.show_quatrains(ui);
                 ui.spacing();
                 self.player.show(ui);
+                self.console.show(ui);
             });
 
         self.state.timings_mut().retain(|x| !x.1);

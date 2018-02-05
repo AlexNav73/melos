@@ -17,6 +17,7 @@ mod support_gfx;
 mod main_window;
 mod dialogs;
 mod state;
+mod console;
 
 use imgui::*;
 
