@@ -16,5 +16,6 @@ serde_json = "1.0"
 [dependencies.rodio]
 git = "https://github.com/AlexNav73/rodio.git"
 branch = "mp3"
+version = "0.5.3"
 default-features = false
 features = ["mp3"]

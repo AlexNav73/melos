@@ -20,6 +20,7 @@ struct Controls {
     paused: AtomicBool,
     time: Mutex<TimeSpan>,
     volume: Mutex<f32>,
+    progress: Mutex<u32>
 }
 
 impl Controls {
@@ -30,6 +31,7 @@ impl Controls {
             paused: false.into(),
             time: Mutex::new(TimeSpan::default()),
             volume: Mutex::new(1.0),
+            progress: Mutex::new(0)
         }
     }
 
@@ -72,6 +74,16 @@ impl Controls {
     fn set_time(&self, value: TimeSpan) {
         *self.time.lock().unwrap() = value;
     }
+
+    #[inline]
+    fn progress(&self) -> u32 {
+        *self.progress.lock().unwrap()
+    }
+
+    #[inline]
+    fn set_progress(&self, value: u32) {
+        *self.progress.lock().unwrap() = value;
+    }
 }
 
 #[derive(Copy, Clone, Default)]
@@ -106,14 +118,18 @@ impl Song {
             let samples_rate = decoder.samples_rate();
             let channels = decoder.channels();
             let samples = decoder.collect::<Vec<_>>();
+            let controls2 = controls.clone();
 
-            let source = TestSource::new(channels, samples_rate, samples, controls.clone())
+            let source = SmartSource::new(channels, samples_rate, samples, controls.clone())
                 .amplify(1.0)
                 .periodic_access(Duration::from_millis(5), move |src| {
                     src.inner_mut().stop(controls.stopped());
                     src.inner_mut().pause(controls.paused());
                     src.inner_mut().play(controls.time());
                     src.set_factor(controls.volume());
+                })
+                .periodic_access(Duration::from_millis(995), move |src| {
+                    controls2.set_progress(src.inner().inner().cursor() as u32);
                 })
                 .convert_samples();
 
@@ -145,9 +161,14 @@ impl Song {
     pub fn volume(&mut self, value: f32) {
         self.controls.set_volume(value);
     }
+
+    #[inline]
+    pub fn progress(&self) -> u32 {
+        self.controls.progress()
+    }
 }
 
-struct TestSource {
+struct SmartSource {
     start: usize,
     end: usize,
     current: usize,
@@ -160,15 +181,15 @@ struct TestSource {
     controls: Arc<Controls>
 }
 
-impl TestSource {
+impl SmartSource {
     #[inline]
     fn new(channels: u16, samples_rate: u32, source: Vec<Sample>, controls: Arc<Controls>) -> Self {
         let duration_ns = 1_000_000_000u64.checked_mul(source.len() as u64).unwrap() /
             samples_rate as u64 / channels as u64;
         let duration = Duration::new(duration_ns / 1_000_000_000,
-                                     (duration_ns % 1_000_000_000) as u32);
+                                    (duration_ns % 1_000_000_000) as u32);
 
-        TestSource {
+        SmartSource {
             channels,
             samples_rate,
             duration,
@@ -180,6 +201,11 @@ impl TestSource {
             stopped: false,
             paused: false,
         }
+    }
+
+    #[inline]
+    fn cursor(&self) -> usize {
+        self.current / self.channels as usize / self.samples_rate as usize
     }
 
     #[inline]
@@ -203,9 +229,9 @@ impl TestSource {
     }
 }
 
-impl fmt::Debug for TestSource {
+impl fmt::Debug for SmartSource {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("TestSource")
+        f.debug_struct("SmartSource")
             .field("start", &self.start)
             .field("end", &self.end)
             .field("current", &self.current)
@@ -217,7 +243,7 @@ impl fmt::Debug for TestSource {
     }
 }
 
-impl Iterator for TestSource {
+impl Iterator for SmartSource {
     type Item = Sample;
 
     #[inline]
@@ -244,7 +270,7 @@ impl Iterator for TestSource {
     }
 }
 
-impl Source for TestSource {
+impl Source for SmartSource {
     #[inline]
     fn current_frame_len(&self) -> Option<usize> {
         None

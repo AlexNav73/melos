@@ -63,6 +63,7 @@ impl AppContext for Program {
         if !main_window_opened {
             self.main_window = None;
         }
+
         opened
     }
 }
