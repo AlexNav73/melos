@@ -31,9 +31,13 @@ impl Player {
     }
 
     #[inline]
-    pub fn play(&mut self, start: f32, end: f32) {
+    pub fn update(&mut self, start: f32, end: f32) {
         self.start = start;
         self.end = end;
+    }
+
+    #[inline]
+    pub fn play(&mut self) {
         self.song.play(TimeSpan::new(self.start(), self.duration()));
     }
 
@@ -104,6 +108,10 @@ impl AppContext for Player {
                 ui.slider_float(im_str!("volume"), &mut self.volume, 0.0, 100.0)
                     .display_format(im_str!("%.0f"))
                     .build();
+                if ui.button(im_str!("play"), (0.0, 0.0)) {
+                    self.play();
+                }
+                ui.same_line(0.0);
                 if ui.button(im_str!("stop"), (0.0, 0.0)) {
                     self.stop();
                 }

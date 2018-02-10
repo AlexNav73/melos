@@ -1,25 +1,33 @@
+use std::fs::File;
+use std::path::Path;
 use std::rc::Rc;
 use std::cell::{RefCell, Ref, RefMut};
 
+use serde_json;
 use imgui::*;
 
 #[derive(Serialize, Deserialize)]
-pub struct AppData {
-    pub lyrics: String,
-    pub timings: Vec<(f32, f32)>,
-    pub path: String
+struct AppData {
+    lyrics: String,
+    timings: Vec<TimeFrame>,
+    path: String
 }
 
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Clone, Serialize, Deserialize)]
 pub struct TimeFrame {
     pub start: f32,
     pub end: f32,
+    pub tooltip: String,
+    #[serde(skip)]
     pub remove: bool
 }
 
 impl TimeFrame {
-    fn new(start: f32, end: f32) -> Self {
-        TimeFrame { start, end, remove: false }
+    pub fn new<T: ToString>(tooltip: T) -> Self {
+        TimeFrame {
+            tooltip: tooltip.to_string(),
+            .. Default::default() 
+        }
     }
 }
 
@@ -34,7 +42,6 @@ struct InnerState {
 pub struct State(Rc<RefCell<InnerState>>);
 
 impl State {
-    #[inline]
     pub fn new() -> Self {
         State(Rc::new(RefCell::new(InnerState {
             lyrics: ImString::with_capacity(10000),
@@ -44,27 +51,21 @@ impl State {
         })))
     }
 
-    #[inline]
-    pub fn to_app_data(&self) -> AppData {
-        let this = self.0.borrow();
-        AppData {
-            lyrics: this.lyrics.to_str().to_owned(),
-            timings: this.timings.iter().map(|&x| (x.start, x.end)).collect(),
-            path: this.path.to_str().to_owned()
-        }
+    pub fn save<P: AsRef<Path>>(&mut self, path: P) {
+        use std::io::Write;
+
+        let mut file = File::create(path).expect("Could not create file");
+        file.write(serde_json::to_string(&self.to_app_data()).unwrap().as_bytes()).unwrap();
     }
 
-    #[inline]
-    pub fn update_from_app_data(&self, saved_state: AppData) {
-        let mut this = self.0.borrow_mut();
-        this.lyrics = ImString::with_capacity(10000);
-        this.lyrics.push_str(&saved_state.lyrics);
-        this.path = ImString::with_capacity(256);
-        this.path.push_str(&saved_state.path);
-        this.timings = saved_state.timings
-            .into_iter()
-            .map(|(x, y)| TimeFrame::new(x, y))
-            .collect();
+    pub fn open<P: AsRef<Path>>(&self, path: P) -> bool {
+        match load(path) {
+            Ok(data) => {
+                self.update_from_app_data(data);
+                true
+            }
+            Err(_) => false
+        }
     }
 
     #[inline]
@@ -96,4 +97,32 @@ impl State {
     pub fn log(&mut self, log: String) {
         self.0.borrow_mut().logs.push(log);
     }
+
+    fn to_app_data(&self) -> AppData {
+        let this = self.0.borrow();
+        AppData {
+            lyrics: this.lyrics.to_str().to_owned(),
+            timings: this.timings.iter().cloned().collect(),
+            path: this.path.to_str().to_owned()
+        }
+    }
+
+    fn update_from_app_data(&self, saved_state: AppData) {
+        let mut this = self.0.borrow_mut();
+        this.lyrics = ImString::with_capacity(10000);
+        this.lyrics.push_str(&saved_state.lyrics);
+        this.path = ImString::with_capacity(256);
+        this.path.push_str(&saved_state.path);
+        this.timings = saved_state.timings.into_iter().collect();
+    }
 }
+
+fn load<P: AsRef<Path>>(path: P) -> Result<AppData, ()> {
+    use std::io::Read;
+
+    let mut file = File::open(path.as_ref()).map_err(|_| ())?;
+    let mut json = String::with_capacity(file.metadata().unwrap().len() as usize);
+    file.read_to_string(&mut json).map_err(|_| ())?;
+    serde_json::from_str::<AppData>(&json).map_err(|_| ())
+}
+
