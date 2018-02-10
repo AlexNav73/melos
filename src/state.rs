@@ -3,11 +3,29 @@ use std::cell::{RefCell, Ref, RefMut};
 
 use imgui::*;
 
-use dialogs::AppData;
+#[derive(Serialize, Deserialize)]
+pub struct AppData {
+    pub lyrics: String,
+    pub timings: Vec<(f32, f32)>,
+    pub path: String
+}
+
+#[derive(Default, Copy, Clone)]
+pub struct TimeFrame {
+    pub start: f32,
+    pub end: f32,
+    pub remove: bool
+}
+
+impl TimeFrame {
+    fn new(start: f32, end: f32) -> Self {
+        TimeFrame { start, end, remove: false }
+    }
+}
 
 struct InnerState {
     lyrics: ImString,
-    timings: Vec<([f32; 2], bool)>,
+    timings: Vec<TimeFrame>,
     path: ImString,
     logs: Vec<String>,
 }
@@ -31,19 +49,22 @@ impl State {
         let this = self.0.borrow();
         AppData {
             lyrics: this.lyrics.to_str().to_owned(),
-            timings: this.timings.iter().map(|&(x, _)| (x[0], x[1])).collect(),
+            timings: this.timings.iter().map(|&x| (x.start, x.end)).collect(),
             path: this.path.to_str().to_owned()
         }
     }
 
     #[inline]
-    pub fn update_from_app_data(&self, mut saved_state: AppData) {
+    pub fn update_from_app_data(&self, saved_state: AppData) {
         let mut this = self.0.borrow_mut();
         this.lyrics = ImString::with_capacity(10000);
         this.lyrics.push_str(&saved_state.lyrics);
         this.path = ImString::with_capacity(256);
         this.path.push_str(&saved_state.path);
-        this.timings = saved_state.timings.drain(..).map(|(x, y)| ([x, y], false)).collect();
+        this.timings = saved_state.timings
+            .into_iter()
+            .map(|(x, y)| TimeFrame::new(x, y))
+            .collect();
     }
 
     #[inline]
@@ -52,7 +73,7 @@ impl State {
     }
 
     #[inline]
-    pub fn timings_mut<'a>(&'a mut self) -> RefMut<'a, Vec<([f32; 2], bool)>> {
+    pub fn timings_mut<'a>(&'a mut self) -> RefMut<'a, Vec<TimeFrame>> {
         RefMut::map(self.0.borrow_mut(), |x| &mut x.timings)
     }
 

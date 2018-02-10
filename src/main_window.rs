@@ -3,7 +3,7 @@ use imgui::*;
 
 use player::Player;
 use support_gfx::AppContext;
-use state::State;
+use state::{State, TimeFrame};
 use console::Console;
 
 pub struct MainWindow {
@@ -48,7 +48,7 @@ impl MainWindow {
                     self.player.open(self.state.path().to_str());
                 }
                 if ui.button(im_str!("+"), (0.0, 0.0)) {
-                    self.state.timings_mut().push(([0.0, 0.0], false));
+                    self.state.timings_mut().push(TimeFrame::default());
                 }
                 self.show_quatrains(ui);
                 ui.spacing();
@@ -56,7 +56,7 @@ impl MainWindow {
                 self.console.show(ui);
             });
 
-        self.state.timings_mut().retain(|x| !x.1);
+        self.state.timings_mut().retain(|x| !x.remove);
 
         opened
     }
@@ -70,19 +70,22 @@ impl MainWindow {
                 for (idx, player) in self.state.timings_mut().iter_mut().enumerate() {
                     ui.with_id(idx as i32, || {
                         if ui.button(im_str!("X"), (30.0, 0.0)) {
-                            player.1 = true;
+                            player.remove = true;
                         }
                         ui.same_line(0.0);
-                        ui.input_float2(im_str!(""), &mut player.0)
+                        let mut frame = [player.start, player.end];
+                        ui.input_float2(im_str!(""), &mut frame)
                             .decimal_precision(2)
                             .build();
+                        player.start = frame[0];
+                        player.end = frame[1];
                         ui.same_line(0.0);
-                        if ui.button(im_str!("@>"), (35.0, 0.0)) {
-                            play = Some((player.0[0], player.0[1]));
+                        if ui.button(im_str!("play"), (35.0, 0.0)) {
+                            play = Some((player.start, player.end));
                         }
                     });
                 }
-                play.map(|(x, y)| self.player.update(x, y));
+                play.map(|(x, y)| self.player.play(x, y));
             });
     }
 }

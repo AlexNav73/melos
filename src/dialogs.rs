@@ -6,14 +6,7 @@ use std::fs::File;
 use std::path::Path;
 
 use support_gfx::AppContext;
-use state::State;
-
-#[derive(Serialize, Deserialize)]
-pub struct AppData {
-    pub lyrics: String,
-    pub timings: Vec<(f32, f32)>,
-    pub path: String
-}
+use state::{State, AppData};
 
 pub struct OpenFileDialog {
     pub opened: bool,

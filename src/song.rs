@@ -270,7 +270,9 @@ impl Iterator for SmartSource {
             return Some(Sample::zero_value());
         } else if self.current < self.end {
             self.current += 1;
-            self.source.get(self.current - 1).cloned()
+            self.source.get(self.current - 1)
+                .cloned()
+                .or(Some(Sample::zero_value()))
         } else {
             self.controls.set_stopped(true);
             return Some(Sample::zero_value());
