@@ -30,7 +30,7 @@ pub fn run<T: AppContext>(title: &'static str, mut app: T) {
     let context = glutin::ContextBuilder::new().with_vsync(true);
     let window = glutin::WindowBuilder::new()
         .with_title(title)
-        .with_dimensions(800, 650);
+        .with_dimensions(1200, 650);
     let (window, mut device, mut factory, mut main_color, mut main_depth) =
         gfx_window_glutin::init::<ColorFormat, DepthFormat>(window, context, &events_loop);
     let mut encoder: gfx::Encoder<_, _> = factory.create_command_buffer().into();

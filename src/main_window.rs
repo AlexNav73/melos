@@ -38,7 +38,7 @@ impl MainWindow {
             .build(|| {
                 ui.columns(2, im_str!("container"), false);
                 ui.input_text(im_str!(""), &mut self.state.lyrics_mut())
-                    .multiline(ImVec2::new(700.0, 530.0))
+                    .multiline(ImVec2::new(550.0, 530.0))
                     .build();
                 ui.next_column();
                 ui.input_text(im_str!("song"), &mut self.state.path_mut()).build();
