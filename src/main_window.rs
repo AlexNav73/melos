@@ -20,6 +20,14 @@ impl AppContext for MainWindow {
 
 impl MainWindow {
     pub fn new(state: State) -> Self {
+        MainWindow {
+            console: Console::new(state.clone()),
+            player: Player::new(state.clone()),
+            state,
+        }
+    }
+
+    pub fn load(state: State) -> Self {
         let player = Player::new(state.clone());
         player.open(state.path().to_str());
         MainWindow {
@@ -44,7 +52,6 @@ impl MainWindow {
                 ui.input_text(im_str!("song"), &mut self.state.path_mut()).build();
                 ui.same_line(0.0);
                 if ui.button(im_str!("open"), (0.0, 0.0)) {
-                    self.state.clean_timings();
                     self.player.open(self.state.path().to_str());
                 }
                 if ui.button(im_str!("+"), (0.0, 0.0)) {

@@ -39,6 +39,9 @@ impl AppContext for Program {
         ui.main_menu_bar(|| {
             ui.menu(im_str!("File"))
                 .build(|| {
+                    if ui.menu_item(im_str!("New")).build() {
+                        self.main_window = Some(MainWindow::new(self.state.clone()));
+                    }
                     if ui.menu_item(im_str!("Save")).build() {
                         self.save_file_dialog.opened = true;
                     }
@@ -55,8 +58,9 @@ impl AppContext for Program {
         self.save_file_dialog.show(ui);
 
         if self.open_file_dialog.should_load() {
-            self.main_window = Some(MainWindow::new(self.state.clone()));
+            self.main_window = Some(MainWindow::load(self.state.clone()));
         }
+
         let mut main_window_opened = false;
         if let Some(ref mut main_window) = self.main_window {
             main_window_opened = main_window.show(ui);

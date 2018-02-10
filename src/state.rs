@@ -37,7 +37,7 @@ impl State {
     #[inline]
     pub fn new() -> Self {
         State(Rc::new(RefCell::new(InnerState {
-            lyrics: ImString::with_capacity(1000),
+            lyrics: ImString::with_capacity(10000),
             timings: Vec::new(),
             path: ImString::with_capacity(256),
             logs: Vec::new(),
@@ -75,11 +75,6 @@ impl State {
     #[inline]
     pub fn timings_mut<'a>(&'a mut self) -> RefMut<'a, Vec<TimeFrame>> {
         RefMut::map(self.0.borrow_mut(), |x| &mut x.timings)
-    }
-
-    #[inline]
-    pub fn clean_timings(&self) {
-        self.0.borrow_mut().timings.clear();
     }
 
     #[inline]
