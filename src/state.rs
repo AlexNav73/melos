@@ -8,7 +8,7 @@ use imgui::*;
 
 #[derive(Serialize, Deserialize)]
 struct AppData {
-    lyrics: String,
+    lyrics: Vec<LanguageTab>,
     timings: Vec<TimeFrame>,
     path: String
 }
@@ -22,6 +22,51 @@ pub struct TimeFrame {
     pub remove: bool
 }
 
+#[derive(Serialize, Deserialize)]
+struct LanguageTab {
+    lang: String,
+    text: String
+}
+
+pub struct ImLanguageTab {
+    pub lang: ImString,
+    pub text: ImString
+}
+
+impl<'a> From<&'a ImLanguageTab> for LanguageTab {
+    fn from(tab: &'a ImLanguageTab) -> Self {
+        LanguageTab {
+            lang: tab.lang.to_str().to_owned(),
+            text: tab.text.to_str().to_owned(),
+        }
+    }
+}
+
+impl From<LanguageTab> for ImLanguageTab {
+    fn from(tab: LanguageTab) -> Self {
+        let mut text = ImString::with_capacity(10000);
+        text.push_str(&tab.text);
+        ImLanguageTab {
+            lang: ImString::new(tab.lang),
+            text
+        }
+    }
+}
+
+impl ImLanguageTab {
+    pub fn new<L, T>(lang: L, text: T) -> Self
+        where L: AsRef<str>,
+              T: AsRef<str>
+    {
+        let mut t = ImString::with_capacity(10000);
+        t.push_str(text.as_ref());
+        ImLanguageTab {
+            lang: ImString::new(lang.as_ref()),
+            text: t
+        }
+    }
+}
+
 impl TimeFrame {
     pub fn new<T: ToString>(tooltip: T) -> Self {
         TimeFrame {
@@ -32,7 +77,7 @@ impl TimeFrame {
 }
 
 struct InnerState {
-    lyrics: ImString,
+    lyrics: Vec<ImLanguageTab>,
     timings: Vec<TimeFrame>,
     path: ImString,
     logs: Vec<String>,
@@ -43,11 +88,13 @@ pub struct State(Rc<RefCell<InnerState>>);
 
 impl State {
     pub fn new() -> Self {
+        let mut lyrics = Vec::new();
+        lyrics.push(ImLanguageTab::new("en", ""));
         State(Rc::new(RefCell::new(InnerState {
-            lyrics: ImString::with_capacity(10000),
             timings: Vec::new(),
             path: ImString::with_capacity(256),
             logs: Vec::new(),
+            lyrics,
         })))
     }
 
@@ -69,7 +116,12 @@ impl State {
     }
 
     #[inline]
-    pub fn lyrics_mut<'a>(&'a mut self) -> RefMut<'a, ImString> {
+    pub fn lyrics<'a>(&'a mut self) -> Ref<'a, Vec<ImLanguageTab>> {
+        Ref::map(self.0.borrow(), |x| &x.lyrics)
+    }
+
+    #[inline]
+    pub fn lyrics_mut<'a>(&'a mut self) -> RefMut<'a, Vec<ImLanguageTab>> {
         RefMut::map(self.0.borrow_mut(), |x| &mut x.lyrics)
     }
 
@@ -101,7 +153,10 @@ impl State {
     fn to_app_data(&self) -> AppData {
         let this = self.0.borrow();
         AppData {
-            lyrics: this.lyrics.to_str().to_owned(),
+            lyrics: this.lyrics
+                .iter()
+                .map(|t| t.into())
+                .collect(),
             timings: this.timings.iter().cloned().collect(),
             path: this.path.to_str().to_owned()
         }
@@ -109,8 +164,12 @@ impl State {
 
     fn update_from_app_data(&self, saved_state: AppData) {
         let mut this = self.0.borrow_mut();
-        this.lyrics = ImString::with_capacity(10000);
-        this.lyrics.push_str(&saved_state.lyrics);
+
+        this.lyrics = saved_state.lyrics
+            .into_iter()
+            .map(|t| t.into())
+            .collect();
+
         this.path = ImString::with_capacity(256);
         this.path.push_str(&saved_state.path);
         this.timings = saved_state.timings.into_iter().collect();

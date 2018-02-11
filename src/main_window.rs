@@ -3,7 +3,7 @@ use imgui::*;
 
 use player::Player;
 use support_gfx::AppContext;
-use state::{State, TimeFrame};
+use state::{State, TimeFrame, ImLanguageTab};
 use console::Console;
 
 pub struct MainWindow {
@@ -11,6 +11,8 @@ pub struct MainWindow {
     player: Player,
     console: Console,
     tooltip_input: ImString,
+    language: usize,
+    lang_name_buf: ImString
 }
 
 impl AppContext for MainWindow {
@@ -25,6 +27,8 @@ impl MainWindow {
             console: Console::new(state.clone()),
             player: Player::new(state.clone()),
             tooltip_input: ImString::with_capacity(15),
+            lang_name_buf: ImString::with_capacity(5),
+            language: 0,
             state,
         }
     }
@@ -35,6 +39,8 @@ impl MainWindow {
         MainWindow {
             console: Console::new(state.clone()),
             tooltip_input: ImString::with_capacity(15),
+            lang_name_buf: ImString::with_capacity(5),
+            language: 0,
             player,
             state,
         }
@@ -46,9 +52,11 @@ impl MainWindow {
             .size((620.0, 565.0), ImGuiCond::FirstUseEver)
             .opened(&mut opened)
             .collapsible(false)
+            .menu_bar(true)
             .build(|| {
+                self.show_menu(ui);
                 ui.columns(2, im_str!("##container"), false);
-                ui.input_text(im_str!(""), &mut self.state.lyrics_mut())
+                ui.input_text(im_str!(""), &mut self.state.lyrics_mut()[self.language].text)
                     .multiline(ImVec2::new(550.0, 530.0))
                     .build();
                 ui.next_column();
@@ -78,6 +86,34 @@ impl MainWindow {
         self.state.timings_mut().retain(|x| !x.remove);
 
         opened
+    }
+
+    fn show_menu<'a>(&mut self, ui: &Ui<'a>) {
+        ui.menu_bar(|| {
+            ui.menu(im_str!("Languages")).build(|| {
+                let mut lang_id = self.language;
+                for (idx, tab) in self.state.lyrics().iter().enumerate() {
+                    ui.with_id(idx as i32, || {
+                        if ui.menu_item(&tab.lang).build() {
+                            lang_id = idx;
+                        }
+                    });
+                }
+                self.language = lang_id;
+                ui.menu(im_str!("New")).build(|| {
+                    ui.with_item_width(40.0, || {
+                        ui.input_text(im_str!("##new_lang"), &mut self.lang_name_buf)
+                            .build();
+                    });
+                    ui.same_line(0.0);
+                    if ui.button(im_str!("+"), (0.0, 0.0)) {
+                        let tab = ImLanguageTab::new(self.lang_name_buf.to_str(), "");
+                        self.state.lyrics_mut().push(tab);
+                        self.lang_name_buf.clear();
+                    }
+                });
+            });
+        });
     }
 
     fn show_quatrains<'a>(&mut self, ui: &Ui<'a>) {
