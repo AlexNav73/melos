@@ -1,8 +1,8 @@
 
-use super::TimeSpan;
+use super::{TimeSpan, DirectAccess};
 use super::controls::Controls;
 
-use rodio::Source;
+use rodio::{Source, Sample as Sample_};
 
 use std::fmt;
 use std::time::Duration;
@@ -10,19 +10,25 @@ use std::sync::Arc;
 
 type Sample = i16;
 
-pub struct SmartSource {
+pub struct SmartSource<T>
+    where T: DirectAccess,
+          <T as Iterator>::Item: Sample_
+{
     start: usize,
     end: usize,
     current: usize,
     stopped: bool,
     paused: bool,
-    source: BaseSource,
+    source: T,
     controls: Arc<Controls>
 }
 
-impl SmartSource {
+impl<T> SmartSource<T> 
+    where T: DirectAccess,
+          <T as Iterator>::Item: Sample_
+{
     #[inline]
-    pub fn new(source: BaseSource, controls: Arc<Controls>) -> Self {
+    pub fn new(source: T, controls: Arc<Controls>) -> Self {
         SmartSource {
             source,
             controls,
@@ -36,7 +42,7 @@ impl SmartSource {
 
     #[inline]
     pub fn cursor(&self) -> usize {
-        self.current / self.source.samples_rate_for_all_channels()
+        self.current / self.samples_rate_for_all_channels()
     }
 
     #[inline]
@@ -51,35 +57,41 @@ impl SmartSource {
 
     #[inline]
     pub fn play(&mut self, time: TimeSpan) {
-        let multiplayer = self.source.samples_rate_for_all_channels();
+        let multiplayer = self.samples_rate_for_all_channels();
         self.start = multiplayer * time.start as usize;
         self.end = self.start + (multiplayer * time.duration as usize);
         if self.current < self.start || self.current > self.end {
             self.current = self.start;
         }
     }
+
+    #[inline]
+    fn samples_rate_for_all_channels(&self) -> usize {
+        self.source.channels() as usize * self.source.samples_rate() as usize
+    }
 }
 
-impl Iterator for SmartSource {
-    type Item = Sample;
+impl<T> Iterator for SmartSource<T>
+    where T: DirectAccess,
+          <T as Iterator>::Item: Sample_
+{
+    type Item = <T as Iterator>::Item;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        use rodio::Sample as _Sample;
-
         if self.paused {
-            return Some(Sample::zero_value());
+            return self.source.next();
         } else if self.stopped {
             self.current = self.start;
-            return Some(Sample::zero_value());
+            return self.source.next();
         } else if self.current < self.end {
             self.current += 1;
             self.source.get(self.current - 1)
                 .cloned()
-                .or(Some(Sample::zero_value()))
+                .or(self.source.next())
         } else {
             self.controls.set_stopped(true);
-            return Some(Sample::zero_value());
+            return self.source.next();
         }
     }
 
@@ -89,7 +101,10 @@ impl Iterator for SmartSource {
     }
 }
 
-impl fmt::Debug for SmartSource {
+impl<T> fmt::Debug for SmartSource<T>
+    where T: DirectAccess,
+          <T as Iterator>::Item: Sample_
+{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("SmartSource")
             .field("start", &self.start)
@@ -102,10 +117,13 @@ impl fmt::Debug for SmartSource {
     }
 }
 
-impl Source for SmartSource {
+impl<T> Source for SmartSource<T>
+    where T: DirectAccess,
+          <T as Iterator>::Item: Sample_
+{
     #[inline]
     fn current_frame_len(&self) -> Option<usize> {
-        None
+        self.source.current_frame_len()
     }
 
     #[inline]
@@ -145,19 +163,28 @@ impl BaseSource {
             source,
         }
     }
+}
 
-    fn samples_rate_for_all_channels(&self) -> usize {
-        self.channels as usize * self.samples_rate as usize
-    }
+impl Iterator for BaseSource {
+    type Item = Sample;
 
     #[inline]
-    fn get(&self, index: usize) -> Option<&Sample> {
-        self.source.get(index)
+    fn next(&mut self) -> Option<Self::Item> {
+        use rodio::Sample as _Sample;
+
+        return Some(Sample::zero_value());
     }
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.source.iter().size_hint()
+    }
+}
+
+impl Source for BaseSource {
+    #[inline]
+    fn current_frame_len(&self) -> Option<usize> {
+        None
     }
 
     #[inline]
@@ -173,6 +200,13 @@ impl BaseSource {
     #[inline]
     fn total_duration(&self) -> Option<Duration> {
         Some(self.duration)
+    }
+}
+
+impl DirectAccess for BaseSource {
+    #[inline]
+    fn get(&self, index: usize) -> Option<&Sample> {
+        self.source.get(index)
     }
 }
 

@@ -5,6 +5,16 @@ mod controls;
 
 pub use self::song::*;
 
+use rodio::{Sample, Source};
+
+use std::fmt;
+
+pub trait DirectAccess: Source + fmt::Debug
+    where Self::Item: Sample
+{
+    fn get(&self, index: usize) -> Option<&Self::Item>;
+}
+
 #[derive(Copy, Clone, Default)]
 pub struct TimeSpan {
     start: u32,
