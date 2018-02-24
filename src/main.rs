@@ -11,13 +11,13 @@ extern crate serde;
 extern crate serde_derive;
 extern crate serde_json;
 
-mod song;
 mod player;
 mod support_gfx;
 mod main_window;
 mod dialogs;
 mod state;
 mod console;
+mod song;
 
 use imgui::*;
 
