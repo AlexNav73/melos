@@ -6,6 +6,8 @@ use std::cell::{RefCell, Ref, RefMut};
 use serde_json;
 use imgui::*;
 
+const DEFAULT_LYRICS_TEXT_SIZE: usize = 10000;
+
 #[derive(Serialize, Deserialize)]
 struct AppData {
     lyrics: Vec<LanguageTab>,
@@ -44,7 +46,7 @@ impl<'a> From<&'a ImLanguageTab> for LanguageTab {
 
 impl From<LanguageTab> for ImLanguageTab {
     fn from(tab: LanguageTab) -> Self {
-        let mut text = ImString::with_capacity(10000);
+        let mut text = ImString::with_capacity(DEFAULT_LYRICS_TEXT_SIZE);
         text.push_str(&tab.text);
         ImLanguageTab {
             lang: ImString::new(tab.lang),
@@ -58,7 +60,7 @@ impl ImLanguageTab {
         where L: AsRef<str>,
               T: AsRef<str>
     {
-        let mut t = ImString::with_capacity(10000);
+        let mut t = ImString::with_capacity(DEFAULT_LYRICS_TEXT_SIZE);
         t.push_str(text.as_ref());
         ImLanguageTab {
             lang: ImString::new(lang.as_ref()),
@@ -106,13 +108,13 @@ impl State {
     }
 
     pub fn open<P: AsRef<Path>>(&self, path: P) -> bool {
-        match load(path) {
-            Ok(data) => {
+        load(path)
+            .map(|data| {
                 self.update_from_app_data(data);
                 true
-            }
-            Err(_) => false
-        }
+            })
+            .map_err(|_| false)
+            .unwrap()
     }
 
     #[inline]
@@ -153,10 +155,7 @@ impl State {
     fn to_app_data(&self) -> AppData {
         let this = self.0.borrow();
         AppData {
-            lyrics: this.lyrics
-                .iter()
-                .map(|t| t.into())
-                .collect(),
+            lyrics: this.lyrics.iter().map(|t| t.into()).collect(),
             timings: this.timings.iter().cloned().collect(),
             path: this.path.to_str().to_owned()
         }
@@ -164,12 +163,7 @@ impl State {
 
     fn update_from_app_data(&self, saved_state: AppData) {
         let mut this = self.0.borrow_mut();
-
-        this.lyrics = saved_state.lyrics
-            .into_iter()
-            .map(|t| t.into())
-            .collect();
-
+        this.lyrics = saved_state.lyrics.into_iter().map(|t| t.into()).collect();
         this.path = ImString::with_capacity(256);
         this.path.push_str(&saved_state.path);
         this.timings = saved_state.timings.into_iter().collect();
