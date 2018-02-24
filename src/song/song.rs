@@ -1,6 +1,6 @@
 
-use super::TimeSpan;
-use super::source::{SmartSource, BaseSource};
+use super::{TimeSpan, FloatWindow};
+use super::sources::{SmartSource, BaseSource, FloatWindowSource};
 use super::controls::Controls;
 
 use rodio;
@@ -39,7 +39,8 @@ impl Song {
             let controls3 = controls.clone();
 
             let base = BaseSource::new(channels, samples_rate, samples);
-            let source = SmartSource::new(base, controls.clone())
+            let float_window = FloatWindowSource::new(base);
+            let source = SmartSource::new(float_window, controls.clone())
                 .amplify(1.0)
                 .periodic_access(Duration::from_millis(5), move |src| {
                     src.inner_mut().stop(controls.stopped());

@@ -1,6 +1,6 @@
 
 mod song;
-mod source;
+mod sources;
 mod controls;
 
 pub use self::song::*;
@@ -13,6 +13,19 @@ pub trait DirectAccess: Source + fmt::Debug
     where Self::Item: Sample
 {
     fn get(&self, index: usize) -> Option<&Self::Item>;
+}
+
+pub trait FloatWindow: Source + fmt::Debug 
+    where Self::Item: Sample
+{
+    fn play(&mut self, time: TimeSpan);
+    fn end(&self) -> usize;
+    fn current(&self) -> usize;
+    fn reset(&mut self);
+
+    fn cursor(&self) -> usize {
+        self.current() / self.channels() as usize / self.samples_rate() as usize
+    }
 }
 
 #[derive(Copy, Clone, Default)]
