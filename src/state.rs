@@ -105,8 +105,7 @@ impl State {
     pub fn save<P: AsRef<Path>>(&mut self, path: P) {
         use std::io::Write;
 
-        let path: &Path = path.as_ref();
-        let mut file = File::create(path.with_extension(SAVE_FILE_EXT)).expect("Could not create file");
+        let mut file = File::create(path.as_ref().with_extension(SAVE_FILE_EXT)).expect("Could not create file");
         file.write(serde_json::to_string(&self.to_app_data()).unwrap().as_bytes()).unwrap();
     }
 
