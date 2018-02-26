@@ -7,7 +7,7 @@ use rodio;
 use rodio::Source;
 
 use std::fs::File;
-use std::path::{Path,PathBuf};
+use std::path::{Path, PathBuf};
 use std::io::BufReader;
 use std::time::Duration;
 use std::sync::Arc;

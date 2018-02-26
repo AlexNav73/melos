@@ -6,18 +6,18 @@ mod controls;
 pub use self::song::*;
 pub use self::sources::Sample;
 
-use rodio::{Sample as Sample_, Source};
+use rodio::Source;
 
 use std::fmt;
 
 pub trait DirectAccess: Source + fmt::Debug
-    where Self::Item: Sample_
+    where Self::Item: ::rodio::Sample
 {
     fn get(&self, index: usize) -> Option<&Self::Item>;
 }
 
 pub trait FloatWindow: Source + fmt::Debug 
-    where Self::Item: Sample_
+    where Self::Item: ::rodio::Sample
 {
     fn play(&mut self, time: TimeSpan);
     fn end(&self) -> usize;
