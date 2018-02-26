@@ -1,5 +1,6 @@
 
 use std::path::Path;
+use std::sync::mpsc::Receiver;
 
 use imgui::*;
 
@@ -12,7 +13,8 @@ pub struct Player {
     state: State,
     start: f32,
     end: f32,
-    volume: f32
+    volume: f32,
+    loaded_event: Option<Receiver<()>>
 }
 
 impl Player {
@@ -23,13 +25,14 @@ impl Player {
             volume: 50.0,
             start: 0.0,
             end: 0.0,
+            loaded_event: None,
             state,
         }
     }
 
     #[inline]
-    pub fn open<P: AsRef<Path>>(&self, path: P) {
-        self.state.set_samples_state(self.song.open(path));
+    pub fn open<P: AsRef<Path>>(&mut self, path: P) {
+        self.loaded_event = Some(self.song.open(path));
     }
 
     #[inline]
@@ -77,8 +80,10 @@ impl Player {
 
     #[inline]
     fn log_load_status(&mut self) {
-        if self.song.loaded() {
-            self.state.log("Song was loaded".into());
+        if let Some(ref e) = self.loaded_event {
+            if let Ok(_) = e.try_recv() {
+                self.state.log("Song was loaded".into());
+            }
         }
     }
 }

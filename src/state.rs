@@ -1,17 +1,14 @@
 
-use ::song::Sample;
-
 use std::fs::File;
 use std::path::Path;
 use std::rc::Rc;
-use std::sync::Arc;
-use std::sync::mpsc::Receiver;
 use std::cell::{RefCell, Ref, RefMut};
 
 use serde_json;
 use imgui::*;
 
 const DEFAULT_LYRICS_TEXT_SIZE: usize = 10000;
+const SAVE_FILE_EXT: &str = "json";
 
 #[derive(Serialize, Deserialize)]
 struct AppData {
@@ -88,7 +85,6 @@ struct InnerState {
     timings: Vec<TimeFrame>,
     path: ImString,
     logs: Vec<String>,
-    samples_state: SamplesLoadState,
 }
 
 #[derive(Clone)]
@@ -102,7 +98,6 @@ impl State {
             timings: Vec::new(),
             path: ImString::with_capacity(256),
             logs: Vec::new(),
-            samples_state: SamplesLoadState::NotInitialized,
             lyrics,
         })))
     }
@@ -110,7 +105,8 @@ impl State {
     pub fn save<P: AsRef<Path>>(&mut self, path: P) {
         use std::io::Write;
 
-        let mut file = File::create(path).expect("Could not create file");
+        let path: &Path = path.as_ref();
+        let mut file = File::create(path.with_extension(SAVE_FILE_EXT)).expect("Could not create file");
         file.write(serde_json::to_string(&self.to_app_data()).unwrap().as_bytes()).unwrap();
     }
 
@@ -156,13 +152,6 @@ impl State {
         self.0.borrow_mut().logs.push(log);
     }
 
-    #[inline]
-    pub fn set_samples_state<T>(&self, state: T)
-        where T: Into<SamplesLoadState> 
-    {
-        self.0.borrow_mut().samples_state = state.into();
-    }
-
     fn to_app_data(&self) -> AppData {
         let this = self.0.borrow();
         AppData {
@@ -184,26 +173,8 @@ impl State {
 fn load<P: AsRef<Path>>(path: P) -> Result<AppData, ()> {
     use std::io::Read;
 
-    let mut file = File::open(path.as_ref()).map_err(|_| ())?;
+    let mut file = File::open(path.as_ref().with_extension(SAVE_FILE_EXT)).map_err(|_| ())?;
     let mut json = String::with_capacity(file.metadata().unwrap().len() as usize);
     file.read_to_string(&mut json).map_err(|_| ())?;
     serde_json::from_str::<AppData>(&json).map_err(|_| ())
-}
-
-pub enum SamplesLoadState {
-    NotReady(Receiver<Arc<Vec<Sample>>>),
-    Ready(Arc<Vec<Sample>>),
-    NotInitialized
-}
-
-impl From<Receiver<Arc<Vec<Sample>>>> for SamplesLoadState {
-    fn from(value: Receiver<Arc<Vec<Sample>>>) -> Self {
-        SamplesLoadState::NotReady(value)
-    }
-}
-
-impl From<Arc<Vec<Sample>>> for SamplesLoadState {
-    fn from(value: Arc<Vec<Sample>>) -> Self {
-        SamplesLoadState::Ready(value)
-    }
 }

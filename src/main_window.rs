@@ -34,10 +34,8 @@ impl MainWindow {
     }
 
     pub fn load(state: State) -> Self {
-        let player = Player::new(state.clone());
-        // TODO(alex): Find a better way to handle `borrow already borrowed content` error
-        let path = { state.path().to_str().to_owned() };
-        player.open(path);
+        let mut player = Player::new(state.clone());
+        player.open(state.path().to_str());
         MainWindow {
             console: Console::new(state.clone()),
             tooltip_input: ImString::with_capacity(15),

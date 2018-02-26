@@ -10,7 +10,6 @@ pub struct Controls {
     pub time: Mutex<TimeSpan>,
     pub volume: Mutex<f32>,
     pub progress: Mutex<u32>,
-    pub loaded: AtomicBool
 }
 
 impl Controls {
@@ -22,7 +21,6 @@ impl Controls {
             time: Mutex::new(TimeSpan::default()),
             volume: Mutex::new(1.0),
             progress: Mutex::new(0),
-            loaded: false.into()
         }
     }
 
@@ -74,11 +72,6 @@ impl Controls {
     #[inline]
     pub fn set_progress(&self, value: u32) {
         *self.progress.lock().unwrap() = value;
-    }
-
-    #[inline]
-    pub fn loaded(&self) -> bool {
-        self.loaded.swap(false, Ordering::SeqCst)
     }
 }
 

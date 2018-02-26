@@ -1,5 +1,5 @@
 
-use super::{TimeSpan, FloatWindow, Sample};
+use super::{TimeSpan, FloatWindow};
 use super::sources::{SmartSource, BaseSource, FloatWindowSource};
 use super::controls::Controls;
 
@@ -24,7 +24,7 @@ impl Song {
     }
 
     #[allow(deprecated)]
-    pub fn open<P: AsRef<Path>>(&self, path: P) -> Receiver<Arc<Vec<Sample>>> {
+    pub fn open<P: AsRef<Path>>(&self, path: P) -> Receiver<()> {
         use std::thread;
 
         let path: PathBuf = path.as_ref().into();
@@ -37,11 +37,10 @@ impl Song {
 
             let samples_rate = decoder.samples_rate();
             let channels = decoder.channels();
-            let samples = Arc::new(decoder.collect::<Vec<_>>());
+            let samples = decoder.collect::<Vec<_>>();
             let controls2 = controls.clone();
-            let controls3 = controls.clone();
 
-            let base = BaseSource::new(channels, samples_rate, samples.clone());
+            let base = BaseSource::new(channels, samples_rate, samples);
             let float_window = FloatWindowSource::new(base);
             let source = SmartSource::new(float_window, controls.clone())
                 .amplify(1.0)
@@ -52,15 +51,14 @@ impl Song {
                     src.set_factor(controls.volume());
                 })
                 .periodic_access(Duration::from_millis(995), move |src| {
-                    controls2.set_progress(src.inner().inner().cursor() as u32);
+                    controls2.set_progress(src.inner().inner().current_sec() as u32);
                 })
                 .convert_samples();
 
             let endpoint = rodio::get_endpoints_list().next().unwrap();
             rodio::play_raw(&endpoint, source);
 
-            controls3.loaded.store(true, Ordering::SeqCst);
-            tx.send(samples).unwrap();
+            tx.send(()).unwrap();
         });
 
         rx
@@ -91,11 +89,6 @@ impl Song {
     #[inline]
     pub fn progress(&self) -> u32 {
         self.controls.progress()
-    }
-
-    #[inline]
-    pub fn loaded(&self) -> bool {
-        self.controls.loaded()
     }
 }
 
