@@ -1,6 +1,11 @@
+
+use ::song::Sample;
+
 use std::fs::File;
 use std::path::Path;
 use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::mpsc::Receiver;
 use std::cell::{RefCell, Ref, RefMut};
 
 use serde_json;
@@ -83,6 +88,7 @@ struct InnerState {
     timings: Vec<TimeFrame>,
     path: ImString,
     logs: Vec<String>,
+    samples_state: SamplesLoadState,
 }
 
 #[derive(Clone)]
@@ -96,6 +102,7 @@ impl State {
             timings: Vec::new(),
             path: ImString::with_capacity(256),
             logs: Vec::new(),
+            samples_state: SamplesLoadState::NotInitialized,
             lyrics,
         })))
     }
@@ -109,10 +116,7 @@ impl State {
 
     pub fn open<P: AsRef<Path>>(&self, path: P) -> bool {
         load(path)
-            .map(|data| {
-                self.update_from_app_data(data);
-                true
-            })
+            .map(|data| { self.update(data); true })
             .map_err(|_| false)
             .unwrap()
     }
@@ -152,6 +156,13 @@ impl State {
         self.0.borrow_mut().logs.push(log);
     }
 
+    #[inline]
+    pub fn set_samples_state<T>(&self, state: T)
+        where T: Into<SamplesLoadState> 
+    {
+        self.0.borrow_mut().samples_state = state.into();
+    }
+
     fn to_app_data(&self) -> AppData {
         let this = self.0.borrow();
         AppData {
@@ -161,7 +172,7 @@ impl State {
         }
     }
 
-    fn update_from_app_data(&self, saved_state: AppData) {
+    fn update(&self, saved_state: AppData) {
         let mut this = self.0.borrow_mut();
         this.lyrics = saved_state.lyrics.into_iter().map(|t| t.into()).collect();
         this.path = ImString::with_capacity(256);
@@ -179,3 +190,20 @@ fn load<P: AsRef<Path>>(path: P) -> Result<AppData, ()> {
     serde_json::from_str::<AppData>(&json).map_err(|_| ())
 }
 
+pub enum SamplesLoadState {
+    NotReady(Receiver<Arc<Vec<Sample>>>),
+    Ready(Arc<Vec<Sample>>),
+    NotInitialized
+}
+
+impl From<Receiver<Arc<Vec<Sample>>>> for SamplesLoadState {
+    fn from(value: Receiver<Arc<Vec<Sample>>>) -> Self {
+        SamplesLoadState::NotReady(value)
+    }
+}
+
+impl From<Arc<Vec<Sample>>> for SamplesLoadState {
+    fn from(value: Arc<Vec<Sample>>) -> Self {
+        SamplesLoadState::Ready(value)
+    }
+}

@@ -52,7 +52,7 @@ impl<T> FloatWindow for FloatWindowSource<T>
     }
 
     #[inline]
-    fn current(&self) -> usize {
+    fn cursor(&self) -> usize {
         self.current
     }
 

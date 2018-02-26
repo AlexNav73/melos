@@ -59,7 +59,7 @@ impl<T> Iterator for SmartSource<T>
         } else if self.stopped {
             self.source.reset();
             return Some(<T as Iterator>::Item::zero_value());
-        } else if self.source.current() < self.source.end() {
+        } else if self.source.cursor() < self.source.end() {
             return self.source.next();
         } else {
             self.controls.set_stopped(true);

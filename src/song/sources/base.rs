@@ -1,22 +1,22 @@
 
 use super::DirectAccess;
+use super::Sample;
 
 use rodio::Source;
 
 use std::fmt;
 use std::time::Duration;
-
-type Sample = i16;
+use std::sync::Arc;
 
 pub struct BaseSource {
     channels: u16,
     samples_rate: u32,
     duration: Duration,
-    source: Vec<Sample>
+    source: Arc<Vec<Sample>>
 }
 
 impl BaseSource {
-    pub fn new(channels: u16, samples_rate: u32, source: Vec<Sample>) -> Self {
+    pub fn new(channels: u16, samples_rate: u32, source: Arc<Vec<Sample>>) -> Self {
         let duration_ns = 1_000_000_000u64.checked_mul(source.len() as u64).unwrap() /
             samples_rate as u64 / channels as u64;
         let duration = Duration::new(duration_ns / 1_000_000_000,

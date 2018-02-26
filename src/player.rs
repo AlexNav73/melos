@@ -1,4 +1,6 @@
 
+use std::path::Path;
+
 use imgui::*;
 
 use support_gfx::AppContext;
@@ -26,8 +28,8 @@ impl Player {
     }
 
     #[inline]
-    pub fn open<P: ToString>(&self, path: P) {
-        self.song.open(path);
+    pub fn open<P: AsRef<Path>>(&self, path: P) {
+        self.state.set_samples_state(self.song.open(path));
     }
 
     #[inline]

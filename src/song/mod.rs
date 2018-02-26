@@ -4,27 +4,28 @@ mod sources;
 mod controls;
 
 pub use self::song::*;
+pub use self::sources::Sample;
 
-use rodio::{Sample, Source};
+use rodio::{Sample as Sample_, Source};
 
 use std::fmt;
 
 pub trait DirectAccess: Source + fmt::Debug
-    where Self::Item: Sample
+    where Self::Item: Sample_
 {
     fn get(&self, index: usize) -> Option<&Self::Item>;
 }
 
 pub trait FloatWindow: Source + fmt::Debug 
-    where Self::Item: Sample
+    where Self::Item: Sample_
 {
     fn play(&mut self, time: TimeSpan);
     fn end(&self) -> usize;
-    fn current(&self) -> usize;
+    fn cursor(&self) -> usize;
     fn reset(&mut self);
 
-    fn cursor(&self) -> usize {
-        self.current() / self.channels() as usize / self.samples_rate() as usize
+    fn current_sec(&self) -> usize {
+        self.cursor() / self.channels() as usize / self.samples_rate() as usize
     }
 }
 

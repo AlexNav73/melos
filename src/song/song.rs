@@ -1,5 +1,5 @@
 
-use super::{TimeSpan, FloatWindow};
+use super::{TimeSpan, FloatWindow, Sample};
 use super::sources::{SmartSource, BaseSource, FloatWindowSource};
 use super::controls::Controls;
 
@@ -7,10 +7,12 @@ use rodio;
 use rodio::Source;
 
 use std::fs::File;
+use std::path::{Path,PathBuf};
 use std::io::BufReader;
 use std::time::Duration;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
+use std::sync::mpsc::{channel, Receiver};
 
 pub struct Song {
     controls: Arc<Controls>,
@@ -22,11 +24,12 @@ impl Song {
     }
 
     #[allow(deprecated)]
-    pub fn open<P: ToString>(&self, path: P) {
+    pub fn open<P: AsRef<Path>>(&self, path: P) -> Receiver<Arc<Vec<Sample>>> {
         use std::thread;
 
-        let path = path.to_string();
+        let path: PathBuf = path.as_ref().into();
         let controls = self.controls.clone();
+        let (tx, rx) = channel();
 
         thread::spawn(move || {
             let file = File::open(path).expect("Invalid file name");
@@ -34,11 +37,11 @@ impl Song {
 
             let samples_rate = decoder.samples_rate();
             let channels = decoder.channels();
-            let samples = decoder.collect::<Vec<_>>();
+            let samples = Arc::new(decoder.collect::<Vec<_>>());
             let controls2 = controls.clone();
             let controls3 = controls.clone();
 
-            let base = BaseSource::new(channels, samples_rate, samples);
+            let base = BaseSource::new(channels, samples_rate, samples.clone());
             let float_window = FloatWindowSource::new(base);
             let source = SmartSource::new(float_window, controls.clone())
                 .amplify(1.0)
@@ -57,7 +60,10 @@ impl Song {
             rodio::play_raw(&endpoint, source);
 
             controls3.loaded.store(true, Ordering::SeqCst);
+            tx.send(samples).unwrap();
         });
+
+        rx
     }
 
     #[inline]
