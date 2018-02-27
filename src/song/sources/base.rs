@@ -7,11 +7,12 @@ use rodio::Source;
 use std::fmt;
 use std::time::Duration;
 
+// TODO(alex): Rename to something more appropriate
 pub struct BaseSource {
     channels: u16,
     samples_rate: u32,
     duration: Duration,
-    source: Vec<Sample>
+    source: Vec<Sample> // TODO(alex): abstract over samples type
 }
 
 impl BaseSource {
