@@ -13,7 +13,6 @@ pub struct SmartSource<T>
     where T: FloatWindow,
           <T as Iterator>::Item: Sample_
 {
-    paused: bool,
     source: T,
     controls: Arc<Controls>
 }
@@ -27,13 +26,7 @@ impl<T> SmartSource<T>
         SmartSource {
             source,
             controls,
-            paused: false,
         }
-    }
-
-    #[inline]
-    pub fn pause(&mut self, pause: bool) {
-        self.paused = pause;
     }
 }
 
@@ -58,9 +51,7 @@ impl<T> Iterator for SmartSource<T>
     fn next(&mut self) -> Option<Self::Item> {
         use rodio::Sample as _Sample;
 
-        if self.paused {
-            return Some(<T as Iterator>::Item::zero_value());
-        } else if self.source.cursor() < self.source.end() {
+        if self.source.cursor() < self.source.end() {
             return self.source.next();
         } else {
             self.controls.set_stopped(true);
@@ -80,7 +71,6 @@ impl<T> fmt::Debug for SmartSource<T>
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("SmartSource")
-            .field("paused", &self.paused)
             .field("source", &self.source)
             .finish()
     }
