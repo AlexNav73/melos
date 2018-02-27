@@ -28,7 +28,19 @@ pub trait FloatWindow: Resettable
     fn play(&mut self, time: TimeSpan);
     fn end(&self) -> usize;
     fn cursor(&self) -> usize;
+}
 
+pub trait Inspectable
+    where Self: FloatWindow,
+          <Self as Iterator>::Item: ::rodio::Sample
+{
+    fn current_sec(&self) -> usize;
+}
+
+impl<T> Inspectable for T
+    where T: FloatWindow,
+          <T as Iterator>::Item: ::rodio::Sample
+{
     fn current_sec(&self) -> usize {
         self.cursor() / self.channels() as usize / self.samples_rate() as usize
     }
