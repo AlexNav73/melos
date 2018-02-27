@@ -1,5 +1,5 @@
 
-use super::{TimeSpan, DirectAccess, FloatWindow};
+use super::{TimeSpan, DirectAccess, FloatWindow, Resettable};
 
 use rodio::{Source, Sample as Sample_};
 
@@ -37,6 +37,16 @@ impl<T> FloatWindowSource<T>
     }
 }
 
+impl<T> Resettable for FloatWindowSource<T>
+    where T: DirectAccess,
+          <T as Iterator>::Item: Sample_
+{
+    #[inline]
+    fn reset(&mut self) {
+        self.current = self.start;
+    }
+}
+
 impl<T> FloatWindow for FloatWindowSource<T>
     where T: DirectAccess,
           <T as Iterator>::Item: Sample_
@@ -59,11 +69,6 @@ impl<T> FloatWindow for FloatWindowSource<T>
     #[inline]
     fn end(&self) -> usize {
         self.end
-    }
-
-    #[inline]
-    fn reset(&mut self) {
-        self.current = self.start;
     }
 }
 

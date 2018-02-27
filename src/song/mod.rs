@@ -16,13 +16,18 @@ pub trait DirectAccess: Source + fmt::Debug
     fn get(&self, index: usize) -> Option<&Self::Item>;
 }
 
-pub trait FloatWindow: Source + fmt::Debug 
+pub trait Resettable: Source + fmt::Debug 
+    where Self::Item: ::rodio::Sample
+{
+    fn reset(&mut self);
+}
+
+pub trait FloatWindow: Resettable
     where Self::Item: ::rodio::Sample
 {
     fn play(&mut self, time: TimeSpan);
     fn end(&self) -> usize;
     fn cursor(&self) -> usize;
-    fn reset(&mut self);
 
     fn current_sec(&self) -> usize {
         self.cursor() / self.channels() as usize / self.samples_rate() as usize
