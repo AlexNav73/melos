@@ -49,8 +49,6 @@ impl<T> Iterator for SmartSource<T>
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        use rodio::Sample as _Sample;
-
         if self.source.cursor() < self.source.end() {
             return self.source.next();
         } else {

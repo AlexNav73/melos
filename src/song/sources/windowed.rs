@@ -117,8 +117,6 @@ impl<T> Iterator for FloatWindowSource<T>
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        use rodio::Sample as _Sample;
-
         if self.current < self.end {
             self.current += 1;
             self.source.get(self.current - 1)
