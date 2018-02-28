@@ -74,7 +74,14 @@ impl MainWindow {
                 });
                 ui.same_line(0.0);
                 if ui.button(im_str!("+"), (0.0, 0.0)) {
-                    self.state.timings_mut().push(TimeFrame::new(self.tooltip_input.to_str()));
+                    {
+                        let tooltip = self.tooltip_input.to_str();
+                        if tooltip.is_empty() {
+                            self.state.timings_mut().push(TimeFrame::new());
+                        } else {
+                            self.state.timings_mut().push(TimeFrame::with_tooltip(tooltip));
+                        }
+                    }
                     self.tooltip_input.clear();
                 }
                 self.show_quatrains(ui);
@@ -129,24 +136,26 @@ impl MainWindow {
             .show_borders(true)
             .build(|| {
                 let mut play = None;
-                for (idx, player) in self.state.timings_mut().iter_mut().enumerate() {
+                for (idx, frame) in self.state.timings_mut().iter_mut().enumerate() {
                     ui.with_id(idx as i32, || {
                         if ui.button(im_str!("X"), (30.0, 0.0)) {
-                            player.remove = true;
+                            frame.remove = true;
                         }
                         ui.same_line(0.0);
-                        let mut frame = [player.start, player.end];
-                        ui.input_float2(im_str!(""), &mut frame)
+                        let mut time_range = [frame.start, frame.end];
+                        ui.input_float2(im_str!(""), &mut time_range)
                             .decimal_precision(2)
                             .build();
                         if ui.is_item_hovered() {
-                            ui.tooltip_text(&player.tooltip);
+                            if let Some(ref t) = frame.tooltip {
+                                ui.tooltip_text(t);
+                            }
                         }
-                        player.start = frame[0];
-                        player.end = frame[1];
+                        frame.start = time_range[0];
+                        frame.end = time_range[1];
                         ui.same_line(0.0);
                         if ui.button(im_str!("play"), (35.0, 0.0)) {
-                            play = Some((player.start, player.end));
+                            play = Some((frame.start, frame.end));
                         }
                     });
                 }

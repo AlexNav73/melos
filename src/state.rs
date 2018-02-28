@@ -21,7 +21,7 @@ struct AppData {
 pub struct TimeFrame {
     pub start: f32,
     pub end: f32,
-    pub tooltip: String,
+    pub tooltip: Option<String>,
     #[serde(skip)]
     pub remove: bool
 }
@@ -78,11 +78,14 @@ impl Default for ImLanguageTab {
 }
 
 impl TimeFrame {
-    pub fn new<T: ToString>(tooltip: T) -> Self {
+    pub fn with_tooltip<T: ToString>(tooltip: T) -> Self {
         TimeFrame {
-            tooltip: tooltip.to_string(),
+            tooltip: Some(tooltip.to_string()),
             .. Default::default() 
         }
+    }
+    pub fn new() -> Self {
+        TimeFrame::default()
     }
 }
 
