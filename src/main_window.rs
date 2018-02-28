@@ -116,7 +116,7 @@ impl MainWindow {
             if ui.button(im_str!("X"), (0.0, 0.0)) {
                 self.state.lyrics_mut().remove(self.language);
                 if self.state.lyrics().len() == 0 {
-                    self.state.lyrics_mut().push(ImLanguageTab::new("en", ""));
+                    self.state.lyrics_mut().push(ImLanguageTab::default());
                 }
                 self.language = 0;
             }

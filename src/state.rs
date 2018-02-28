@@ -71,6 +71,12 @@ impl ImLanguageTab {
     }
 }
 
+impl Default for ImLanguageTab {
+    fn default() -> Self {
+        ImLanguageTab::new("en", "")
+    }
+}
+
 impl TimeFrame {
     pub fn new<T: ToString>(tooltip: T) -> Self {
         TimeFrame {
@@ -93,7 +99,7 @@ pub struct State(Rc<RefCell<InnerState>>);
 impl State {
     pub fn new() -> Self {
         let mut lyrics = Vec::new();
-        lyrics.push(ImLanguageTab::new("en", ""));
+        lyrics.push(ImLanguageTab::default());
         State(Rc::new(RefCell::new(InnerState {
             timings: Vec::new(),
             path: ImString::with_capacity(256),
