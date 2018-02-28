@@ -49,8 +49,8 @@ impl<T> Iterator for SmartSource<T>
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        if self.source.cursor() < self.source.end() {
-            return self.source.next();
+        if let a @ Some(_) = self.source.next() {
+            a
         } else {
             self.controls.set_stopped(true);
             return Some(<T as Iterator>::Item::zero_value());

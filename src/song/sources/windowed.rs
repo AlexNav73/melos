@@ -13,7 +13,6 @@ pub struct FloatWindowSource<T>
 {
     start: usize,
     end: usize,
-    current: usize,
     source: T
 }
 
@@ -26,8 +25,7 @@ impl<T> FloatWindowSource<T>
         FloatWindowSource {
             source,
             start: 0,
-            end: 0,
-            current: 0,
+            end: 0
         }
     }
 
@@ -43,7 +41,7 @@ impl<T> Resettable for FloatWindowSource<T>
 {
     #[inline]
     fn reset(&mut self) {
-        self.current = self.start;
+        self.source.set_current(self.start);
     }
 }
 
@@ -56,14 +54,14 @@ impl<T> FloatWindow for FloatWindowSource<T>
         let multiplayer = self.samples_rate_for_all_channels();
         self.start = multiplayer * time.start as usize;
         self.end = self.start + (multiplayer * time.duration as usize);
-        if self.current < self.start || self.current > self.end {
-            self.current = self.start;
+        if self.source.current() < self.start || self.source.current() > self.end {
+            self.source.set_current(self.start);
         }
     }
 
     #[inline]
     fn cursor(&self) -> usize {
-        self.current
+        self.source.current()
     }
 
     #[inline]
@@ -117,13 +115,10 @@ impl<T> Iterator for FloatWindowSource<T>
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        if self.current < self.end {
-            self.current += 1;
-            self.source.get(self.current - 1)
-                .cloned()
-                .or(Some(<T as Iterator>::Item::zero_value()))
+        if self.current() < self.end {
+            self.source.next()
         } else {
-            return Some(<T as Iterator>::Item::zero_value());
+            None
         }
     }
 
@@ -141,7 +136,6 @@ impl<T> fmt::Debug for FloatWindowSource<T>
         f.debug_struct("FloatWindowSource")
             .field("start", &self.start)
             .field("end", &self.end)
-            .field("current", &self.current)
             .field("source", &self.source)
             .finish()
     }

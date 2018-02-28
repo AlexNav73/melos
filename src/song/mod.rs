@@ -13,7 +13,8 @@ use std::fmt;
 pub trait DirectAccess: Source + fmt::Debug
     where Self::Item: ::rodio::Sample
 {
-    fn get(&self, index: usize) -> Option<&Self::Item>;
+    fn current(&self) -> usize;
+    fn set_current(&mut self, index: usize);
 }
 
 pub trait Resettable: Source + fmt::Debug 

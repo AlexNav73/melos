@@ -9,6 +9,7 @@ use std::time::Duration;
 
 // TODO(alex): Rename to something more appropriate
 pub struct BaseSource {
+    current: usize,
     channels: u16,
     samples_rate: u32,
     duration: Duration,
@@ -23,6 +24,7 @@ impl BaseSource {
                                     (duration_ns % 1_000_000_000) as u32);
 
         BaseSource {
+            current: 0,
             channels,
             samples_rate,
             duration,
@@ -36,9 +38,8 @@ impl Iterator for BaseSource {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        use rodio::Sample as _Sample;
-
-        return Some(Sample::zero_value());
+        self.current += 1;
+        self.source.get(self.current - 1).cloned()
     }
 
     #[inline]
@@ -71,8 +72,12 @@ impl Source for BaseSource {
 
 impl DirectAccess for BaseSource {
     #[inline]
-    fn get(&self, index: usize) -> Option<&Sample> {
-        self.source.get(index)
+    fn current(&self) -> usize {
+        self.current
+    }
+    #[inline]
+    fn set_current(&mut self, index: usize) {
+        self.current = index;
     }
 }
 
