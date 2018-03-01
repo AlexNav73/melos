@@ -1,7 +1,7 @@
 
+use glutin;
 use imgui::{ImGui, Ui};
 use imgui_gfx_renderer::{Renderer, Shaders};
-use glutin;
 
 use std::time::Instant;
 
@@ -75,7 +75,7 @@ pub fn run<T: AppContext>(title: &'static str, mut app: T) {
                     }
                     Closed => quit = true,
                     KeyboardInput { input, .. } => configure_imgui_keys(&mut imgui, input),
-                    MouseMoved { position: (x, y), .. } => mouse_state.pos = (x as i32, y as i32),
+                    CursorMoved { position: (x, y), .. } => mouse_state.pos = (x as i32, y as i32),
                     MouseInput { state, button, .. } => {
                         match button {
                             MouseButton::Left => mouse_state.pressed.0 = state == Pressed,
@@ -107,8 +107,8 @@ pub fn run<T: AppContext>(title: &'static str, mut app: T) {
 
         update_mouse(&mut imgui, &mut mouse_state);
 
-        let size_points = window.get_inner_size_points().unwrap();
-        let size_pixels = window.get_inner_size_pixels().unwrap();
+        let size_points = window.get_inner_size().unwrap();
+        let size_pixels = window.get_inner_size().unwrap();
 
         let ui = imgui.frame(size_points, size_pixels, delta_s);
         if !app.show(&ui) {
@@ -152,13 +152,11 @@ fn configure_imgui_keys(imgui: &mut ImGui, input: glutin::KeyboardInput) {
         Some(Key::X) => imgui.set_key(16, pressed),
         Some(Key::Y) => imgui.set_key(17, pressed),
         Some(Key::Z) => imgui.set_key(18, pressed),
-        Some(Key::LControl) |
-            Some(Key::RControl) => imgui.set_key_ctrl(pressed),
-            Some(Key::LShift) |
-                Some(Key::RShift) => imgui.set_key_shift(pressed),
-                Some(Key::LAlt) | Some(Key::RAlt) => imgui.set_key_alt(pressed),
-                Some(Key::LWin) | Some(Key::RWin) => imgui.set_key_super(pressed),
-                _ => {}
+        Some(Key::LControl) | Some(Key::RControl) => imgui.set_key_ctrl(pressed),
+        Some(Key::LShift) | Some(Key::RShift) => imgui.set_key_shift(pressed),
+        Some(Key::LAlt) | Some(Key::RAlt) => imgui.set_key_alt(pressed),
+        Some(Key::LWin) | Some(Key::RWin) => imgui.set_key_super(pressed),
+        _ => {}
     }
 }
 

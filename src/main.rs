@@ -2,6 +2,7 @@
 extern crate gfx;
 extern crate gfx_window_glutin;
 extern crate glutin;
+extern crate winit;
 #[macro_use]
 extern crate imgui;
 extern crate imgui_gfx_renderer;
