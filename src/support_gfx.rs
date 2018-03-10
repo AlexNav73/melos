@@ -52,6 +52,10 @@ pub fn run<T: AppContext>(title: &'static str, mut app: T) {
     };
 
     let mut imgui = ImGui::init();
+
+    let cyrillic = imgui.get_glyph_ranges_cyrillic();
+    imgui.add_font_from_file_ttf(r#"C:\Windows\Fonts\Tahoma.ttf"#, 15.0, cyrillic);
+
     let mut renderer = Renderer::init(&mut imgui, &mut factory, shaders, main_color.clone())
         .expect("Failed to initialize renderer");
 
