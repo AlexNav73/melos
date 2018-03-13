@@ -380,7 +380,7 @@ dependencies = [
 [[package]]
 name = "imgui"
 version = "0.0.19-pre1"
-source = "git+https://github.com/AlexNav73/imgui-rs.git#af4365172f36c2737f077be87c15306a09da0d5f"
+source = "git+https://github.com/AlexNav73/imgui-rs.git#6920c9ce309becc13e363a77120af4df342caea5"
 dependencies = [
  "imgui-sys 0.0.19-pre (git+https://github.com/AlexNav73/imgui-rs.git)",
 ]
@@ -388,7 +388,7 @@ dependencies = [
 [[package]]
 name = "imgui-gfx-renderer"
 version = "0.0.19-pre"
-source = "git+https://github.com/AlexNav73/imgui-rs.git#af4365172f36c2737f077be87c15306a09da0d5f"
+source = "git+https://github.com/AlexNav73/imgui-rs.git#6920c9ce309becc13e363a77120af4df342caea5"
 dependencies = [
  "gfx 0.16.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "imgui 0.0.19-pre1 (git+https://github.com/AlexNav73/imgui-rs.git)",
@@ -398,7 +398,7 @@ dependencies = [
 [[package]]
 name = "imgui-sys"
 version = "0.0.19-pre"
-source = "git+https://github.com/AlexNav73/imgui-rs.git#af4365172f36c2737f077be87c15306a09da0d5f"
+source = "git+https://github.com/AlexNav73/imgui-rs.git#6920c9ce309becc13e363a77120af4df342caea5"
 dependencies = [
  "bitflags 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "cc 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",

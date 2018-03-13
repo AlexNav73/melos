@@ -56,7 +56,6 @@ pub fn run<T: AppContext>(title: &'static str, mut app: T) {
     let cyrillic = imgui.get_glyph_ranges_cyrillic();
     imgui.add_font_from_memory_compressed_ttf(
         ::fonts::tahoma::TAHOMA_FONT_DATA, 
-        ::fonts::tahoma::TAHOMA_FONT_DATA.len(),
         15.0,
         cyrillic);
 
