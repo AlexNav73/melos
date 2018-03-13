@@ -18,6 +18,7 @@ mod dialogs;
 mod state;
 mod console;
 mod song;
+mod fonts;
 
 use imgui::*;
 
