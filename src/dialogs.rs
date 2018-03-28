@@ -4,9 +4,8 @@ use ignore::WalkBuilder;
 use ignore::overrides::OverrideBuilder;
 
 use state::State;
-
-const BASE_DIR: &str = ".";
-const SAVE_FILE_EXT_FILTER: &str = "*.json";
+use constants::global::*;
+use constants::dialogs::*;
 
 pub struct OpenFileDialog {
     pub opened: bool,
@@ -22,7 +21,7 @@ impl OpenFileDialog {
         OpenFileDialog {
             opened: false,
             load: false,
-            path: ImString::with_capacity(256),
+            path: ImString::with_capacity(MAX_PATH_LEN),
             cached_paths: Vec::new(),
             selected_item: 0,
             state
@@ -33,7 +32,7 @@ impl OpenFileDialog {
         let mut opened = self.opened;
         if opened {
             ui.window(im_str!("Open File"))
-                .size((275.0, 165.0), ImGuiCond::Always)
+                .size(DIALOG_SIZES, ImGuiCond::Always)
                 .opened(&mut opened)
                 .collapsible(false)
                 .resizable(false)
@@ -43,7 +42,7 @@ impl OpenFileDialog {
                     if ui.button(im_str!("open"), (0.0, 0.0)) {
                         self.load = self.state.open(self.path.to_str());
                     }
-                    ui.with_item_width(260.0, || self.show_file_browser(ui));
+                    ui.with_item_width(FILE_BROWSER_WIDTH, || self.show_file_browser(ui));
                 });
         }
         self.opened = !(self.load || !opened);
@@ -68,13 +67,7 @@ impl OpenFileDialog {
             .map(|x| x.as_ref())
             .collect::<Vec<_>>();
 
-        if ui.list_box(
-            im_str!("##files"),
-            &mut self.selected_item,
-            rpath.as_slice(), 5)
-        {
-            println!("SELECTED: {}", self.selected_item);
-        }
+        ui.list_box(im_str!("##files"), &mut self.selected_item, rpath.as_slice(), 5);
 
         if let Some(ref p) = self.cached_paths.get(self.selected_item as usize) {
             if old_selection != self.selected_item ||
@@ -100,7 +93,7 @@ impl SaveFileDialog {
         SaveFileDialog {
             opened: false,
             saved: false,
-            path: ImString::with_capacity(256),
+            path: ImString::with_capacity(MAX_PATH_LEN),
             cached_paths: Vec::new(),
             state
         }
@@ -110,7 +103,7 @@ impl SaveFileDialog {
         let mut opened = self.opened;
         if opened {
             ui.window(im_str!("Save File"))
-                .size((275.0, 165.0), ImGuiCond::Always)
+                .size(DIALOG_SIZES, ImGuiCond::Always)
                 .opened(&mut opened)
                 .collapsible(false)
                 .resizable(false)
@@ -121,7 +114,7 @@ impl SaveFileDialog {
                         self.state.save(self.path.to_str());
                         self.update_cached_paths();
                     }
-                    ui.with_item_width(260.0, || self.show_file_browser(ui));
+                    ui.with_item_width(FILE_BROWSER_WIDTH, || self.show_file_browser(ui));
                 });
         }
         self.opened = !(self.saved || !opened);
@@ -141,9 +134,7 @@ impl SaveFileDialog {
             .map(|x| x.as_ref())
             .collect::<Vec<_>>();
 
-        if ui.list_box(im_str!("##files"), &mut 0, rpath.as_slice(), 5) {
-            println!("SELECTED");
-        }
+        ui.list_box(im_str!("##files"), &mut 0, rpath.as_slice(), 5);
     }
 }
 

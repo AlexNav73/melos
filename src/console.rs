@@ -3,6 +3,7 @@ use imgui::*;
 
 use support_gfx::AppContext;
 use state::State;
+use constants::console::*;
 
 pub struct Console {
     state: State
@@ -16,7 +17,7 @@ impl Console {
 
 impl AppContext for Console {
     fn show<'a>(&mut self, ui: &Ui<'a>) -> bool {
-        ui.child_frame(im_str!("logs"), (340.0, 172.0))
+        ui.child_frame(im_str!("logs"), CONSOLE_SIZE)
             .show_scrollbar(true)
             .show_borders(true)
             .build(|| {

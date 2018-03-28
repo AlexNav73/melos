@@ -7,8 +7,8 @@ use std::cell::{RefCell, Ref, RefMut};
 use serde_json;
 use imgui::*;
 
-const DEFAULT_LYRICS_TEXT_SIZE: usize = 10000;
-const SAVE_FILE_EXT: &str = "json";
+use constants::global::*;
+use constants::state::*;
 
 #[derive(Serialize, Deserialize)]
 struct AppData {
@@ -73,7 +73,7 @@ impl ImLanguageTab {
 
 impl Default for ImLanguageTab {
     fn default() -> Self {
-        ImLanguageTab::new("en", "")
+        ImLanguageTab::new(DEFAULT_TAB_LANG, "")
     }
 }
 
@@ -105,7 +105,7 @@ impl State {
         lyrics.push(ImLanguageTab::default());
         State(Rc::new(RefCell::new(InnerState {
             timings: Vec::new(),
-            path: ImString::with_capacity(256),
+            path: ImString::with_capacity(MAX_PATH_LEN),
             logs: Vec::new(),
             lyrics,
         })))
@@ -172,7 +172,7 @@ impl State {
     fn update(&self, saved_state: AppData) {
         let mut this = self.0.borrow_mut();
         this.lyrics = saved_state.lyrics.into_iter().map(|t| t.into()).collect();
-        this.path = ImString::with_capacity(256);
+        this.path = ImString::with_capacity(MAX_PATH_LEN);
         this.path.push_str(&saved_state.path);
         this.timings = saved_state.timings.into_iter().collect();
     }

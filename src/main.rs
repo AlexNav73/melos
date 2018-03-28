@@ -20,6 +20,7 @@ mod state;
 mod console;
 mod song;
 mod fonts;
+mod constants;
 
 use imgui::*;
 

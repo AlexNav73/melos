@@ -7,6 +7,7 @@ use imgui::*;
 use support_gfx::AppContext;
 use state::State;
 use song::{Song, TimeSpan};
+use constants::player::*;
 
 pub struct Player {
     song: Song,
@@ -22,7 +23,7 @@ impl Player {
     pub fn new(state: State) -> Self {
         Player {
             song: Song::new(),
-            volume: 50.0,
+            volume: DEFAULT_VOLUME,
             start: 0.0,
             end: 0.0,
             loaded_event: None,
@@ -102,7 +103,7 @@ fn to_f(time: u32) -> f32 {
 
 impl AppContext for Player {
     fn show<'a>(&mut self, ui: &Ui<'a>) -> bool {
-        ui.child_frame(im_str!("player"), (340.0, 100.0))
+        ui.child_frame(im_str!("player"), PLAYER_FRAME_SIZE)
             .show_borders(true)
             .build(|| {
                 ui.progress_bar(self.progress())
