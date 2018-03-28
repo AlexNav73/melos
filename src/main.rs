@@ -11,6 +11,9 @@ extern crate serde;
 extern crate serde_derive;
 extern crate serde_json;
 extern crate ignore;
+extern crate config;
+#[macro_use]
+extern crate lazy_static;
 
 mod player;
 mod support_gfx;
@@ -21,6 +24,7 @@ mod console;
 mod song;
 mod fonts;
 mod constants;
+mod configuration;
 
 use imgui::*;
 
