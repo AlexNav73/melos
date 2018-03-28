@@ -5,7 +5,7 @@ use ignore::overrides::OverrideBuilder;
 
 use state::State;
 use constants::global::*;
-use constants::dialogs::*;
+use configuration::CONFIG;
 
 pub struct OpenFileDialog {
     pub opened: bool,
@@ -32,7 +32,7 @@ impl OpenFileDialog {
         let mut opened = self.opened;
         if opened {
             ui.window(im_str!("Open File"))
-                .size(DIALOG_SIZES, ImGuiCond::Always)
+                .size(CONFIG.dialogs.dialog_sizes, ImGuiCond::Always)
                 .opened(&mut opened)
                 .collapsible(false)
                 .resizable(false)
@@ -42,7 +42,7 @@ impl OpenFileDialog {
                     if ui.button(im_str!("open"), (0.0, 0.0)) {
                         self.load = self.state.open(self.path.to_str());
                     }
-                    ui.with_item_width(FILE_BROWSER_WIDTH, || self.show_file_browser(ui));
+                    ui.with_item_width(CONFIG.dialogs.file_browser_width, || self.show_file_browser(ui));
                 });
         }
         self.opened = !(self.load || !opened);
@@ -57,9 +57,13 @@ impl OpenFileDialog {
         false
     }
 
+    pub fn update_cached_paths(&mut self) {
+        self.cached_paths = enumerate_files();
+    }
+
     fn show_file_browser<'a>(&mut self, ui: &Ui<'a>) {
         if self.cached_paths.is_empty() {
-            self.cached_paths = enumerate_files();
+            self.update_cached_paths();
         }
 
         let old_selection = self.selected_item;
@@ -103,7 +107,7 @@ impl SaveFileDialog {
         let mut opened = self.opened;
         if opened {
             ui.window(im_str!("Save File"))
-                .size(DIALOG_SIZES, ImGuiCond::Always)
+                .size(CONFIG.dialogs.dialog_sizes, ImGuiCond::Always)
                 .opened(&mut opened)
                 .collapsible(false)
                 .resizable(false)
@@ -114,21 +118,21 @@ impl SaveFileDialog {
                         self.state.save(self.path.to_str());
                         self.update_cached_paths();
                     }
-                    ui.with_item_width(FILE_BROWSER_WIDTH, || self.show_file_browser(ui));
+                    ui.with_item_width(CONFIG.dialogs.file_browser_width, || self.show_file_browser(ui));
                 });
         }
         self.opened = !(self.saved || !opened);
         self.opened
     }
 
-    fn update_cached_paths(&mut self) {
-        if self.cached_paths.is_empty() {
-            self.cached_paths = enumerate_files();
-        }
+    pub fn update_cached_paths(&mut self) {
+        self.cached_paths = enumerate_files();
     }
 
     fn show_file_browser<'a>(&mut self, ui: &Ui<'a>) {
-        self.update_cached_paths();
+        if self.cached_paths.is_empty() {
+            self.update_cached_paths();
+        }
 
         let rpath = self.cached_paths.iter()
             .map(|x| x.as_ref())
@@ -139,11 +143,11 @@ impl SaveFileDialog {
 }
 
 fn enumerate_files() -> Vec<ImString> {
-    let filters = OverrideBuilder::new(BASE_DIR)
-        .add(SAVE_FILE_EXT_FILTER).unwrap()
+    let filters = OverrideBuilder::new(&CONFIG.dialogs.base_dir)
+        .add(&CONFIG.dialogs.save_file_ext_filter).unwrap()
         .build().unwrap();
 
-    WalkBuilder::new(BASE_DIR)
+    WalkBuilder::new(&CONFIG.dialogs.base_dir)
         .max_depth(Some(1))
         .standard_filters(true)
         .overrides(filters)

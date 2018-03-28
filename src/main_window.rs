@@ -5,7 +5,7 @@ use player::Player;
 use support_gfx::AppContext;
 use state::{State, TimeFrame, ImLanguageTab};
 use console::Console;
-use constants::main_window::*;
+use configuration::CONFIG;
 
 pub struct MainWindow {
     state: State,
@@ -27,8 +27,8 @@ impl MainWindow {
         MainWindow {
             console: Console::new(state.clone()),
             player: Player::new(state.clone()),
-            tooltip_input: ImString::with_capacity(TOOLTIP_LEN),
-            lang_name_buf: ImString::with_capacity(LANG_NAME_LEN),
+            tooltip_input: ImString::with_capacity(CONFIG.main_window.tooltip_len),
+            lang_name_buf: ImString::with_capacity(CONFIG.main_window.lang_name_len),
             language: 0,
             state,
         }
@@ -39,8 +39,8 @@ impl MainWindow {
         player.open(state.path().to_str());
         MainWindow {
             console: Console::new(state.clone()),
-            tooltip_input: ImString::with_capacity(TOOLTIP_LEN),
-            lang_name_buf: ImString::with_capacity(LANG_NAME_LEN),
+            tooltip_input: ImString::with_capacity(CONFIG.main_window.tooltip_len),
+            lang_name_buf: ImString::with_capacity(CONFIG.main_window.lang_name_len),
             language: 0,
             player,
             state,
@@ -50,7 +50,7 @@ impl MainWindow {
     fn show_main_window<'a>(&mut self, ui: &Ui<'a>) -> bool {
         let mut opened = true;
         ui.window(im_str!("Lyrics"))
-            .size(MAIN_WINDOW_SIZE, ImGuiCond::FirstUseEver)
+            .size(CONFIG.main_window.main_window_size, ImGuiCond::FirstUseEver)
             .opened(&mut opened)
             .collapsible(false)
             .menu_bar(true)
@@ -58,19 +58,21 @@ impl MainWindow {
                 self.show_menu(ui);
                 ui.columns(2, im_str!("##container"), false);
                 ui.input_text(im_str!(""), &mut self.state.lyrics_mut()[self.language].text)
-                    .multiline(ImVec2::new(LYRICS_INPUT_WIDTH, LYRICS_INPUT_HEIGHT))
+                    .multiline(ImVec2::new(
+                            CONFIG.main_window.lyrics_input_width,
+                            CONFIG.main_window.lyrics_input_height))
                     .build();
                 ui.next_column();
                 let column_idx = ui.get_column_index();
-                ui.set_column_offset(column_idx, COLUMN_OFFSET);
-                ui.with_item_width(SONG_PATH_INPUT_LEN, || {
+                ui.set_column_offset(column_idx, CONFIG.main_window.column_offset);
+                ui.with_item_width(CONFIG.main_window.song_path_input_len, || {
                     ui.input_text(im_str!("##song"), &mut self.state.path_mut()).build();
                 });
                 ui.same_line(0.0);
                 if ui.button(im_str!("open"), (0.0, 0.0)) {
                     self.player.open(self.state.path().to_str());
                 }
-                ui.with_item_width(TIMEFRAME_TOOLTIP_WIDTH, || {
+                ui.with_item_width(CONFIG.main_window.timeframe_tooltip_width, || {
                     ui.input_text(im_str!("##tooltip"), &mut self.tooltip_input).build();
                 });
                 ui.same_line(0.0);
@@ -109,7 +111,7 @@ impl MainWindow {
                 }
                 self.language = lang_id;
                 ui.menu(im_str!("New")).build(|| {
-                    ui.with_item_width(NEW_LANG_INPUT_WIDTH, || {
+                    ui.with_item_width(CONFIG.main_window.new_lang_input_width, || {
                         ui.input_text(im_str!("##new_lang"), &mut self.lang_name_buf)
                             .build();
                     });
@@ -132,7 +134,7 @@ impl MainWindow {
     }
 
     fn show_quatrains<'a>(&mut self, ui: &Ui<'a>) {
-        ui.child_frame(im_str!("quatrains"), QUATRAINS_FRAME_SIZE)
+        ui.child_frame(im_str!("quatrains"), CONFIG.main_window.quatrains_frame_size)
             .show_scrollbar(true)
             .show_borders(true)
             .build(|| {

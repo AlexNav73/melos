@@ -8,7 +8,7 @@ use serde_json;
 use imgui::*;
 
 use constants::global::*;
-use constants::state::*;
+use configuration::CONFIG;
 
 #[derive(Serialize, Deserialize)]
 struct AppData {
@@ -48,7 +48,7 @@ impl<'a> From<&'a ImLanguageTab> for LanguageTab {
 
 impl From<LanguageTab> for ImLanguageTab {
     fn from(tab: LanguageTab) -> Self {
-        let mut text = ImString::with_capacity(DEFAULT_LYRICS_TEXT_SIZE);
+        let mut text = ImString::with_capacity(CONFIG.state.default_lyrics_text_size);
         text.push_str(&tab.text);
         ImLanguageTab {
             lang: ImString::new(tab.lang),
@@ -62,7 +62,7 @@ impl ImLanguageTab {
         where L: AsRef<str>,
               T: AsRef<str>
     {
-        let mut t = ImString::with_capacity(DEFAULT_LYRICS_TEXT_SIZE);
+        let mut t = ImString::with_capacity(CONFIG.state.default_lyrics_text_size);
         t.push_str(text.as_ref());
         ImLanguageTab {
             lang: ImString::new(lang.as_ref()),
@@ -73,7 +73,7 @@ impl ImLanguageTab {
 
 impl Default for ImLanguageTab {
     fn default() -> Self {
-        ImLanguageTab::new(DEFAULT_TAB_LANG, "")
+        ImLanguageTab::new(&CONFIG.state.default_tab_lang, "")
     }
 }
 
@@ -114,7 +114,8 @@ impl State {
     pub fn save<P: AsRef<Path>>(&mut self, path: P) {
         use std::io::Write;
 
-        let mut file = File::create(path.as_ref().with_extension(SAVE_FILE_EXT)).expect("Could not create file");
+        let path = path.as_ref().with_extension(&CONFIG.state.save_file_ext);
+        let mut file = File::create(path).expect("Could not create file");
         file.write(serde_json::to_string(&self.to_app_data()).unwrap().as_bytes()).unwrap();
     }
 
@@ -181,7 +182,8 @@ impl State {
 fn load<P: AsRef<Path>>(path: P) -> Result<AppData, ()> {
     use std::io::Read;
 
-    let mut file = File::open(path.as_ref().with_extension(SAVE_FILE_EXT)).map_err(|_| ())?;
+    let path = path.as_ref().with_extension(&CONFIG.state.save_file_ext);
+    let mut file = File::open(path).map_err(|_| ())?;
     let mut json = String::with_capacity(file.metadata().unwrap().len() as usize);
     file.read_to_string(&mut json).map_err(|_| ())?;
     serde_json::from_str::<AppData>(&json).map_err(|_| ())

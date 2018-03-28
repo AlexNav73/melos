@@ -21,35 +21,35 @@ pub struct State {
 
 #[derive(Debug)]
 pub struct Dialogs {
-    base_dir: String,
-    save_file_ext_filter: String,
-    dialog_sizes: (f32, f32),
-    file_browser_width: f32,
+    pub base_dir: String,
+    pub save_file_ext_filter: String,
+    pub dialog_sizes: (f32, f32),
+    pub file_browser_width: f32,
 }
 
 #[derive(Debug)]
 pub struct Player {
-    player_frame_size: (f32, f32),
-    default_volume: f32,
+    pub player_frame_size: (f32, f32),
+    pub default_volume: f32,
 }
 
 #[derive(Debug)]
 pub struct Console {
-    console_size: (f32, f32),
+    pub console_size: (f32, f32),
 }
 
 #[derive(Debug)]
 pub struct MainWindow {
-    tooltip_len: usize,
-    lang_name_len: usize,
-    main_window_size: (f32, f32),
-    lyrics_input_width: f32,
-    lyrics_input_height: f32,
-    column_offset: f32,
-    song_path_input_len: f32,
-    timeframe_tooltip_width: f32,
-    new_lang_input_width: f32,
-    quatrains_frame_size: (f32, f32),
+    pub tooltip_len: usize,
+    pub lang_name_len: usize,
+    pub main_window_size: (f32, f32),
+    pub lyrics_input_width: f32,
+    pub lyrics_input_height: f32,
+    pub column_offset: f32,
+    pub song_path_input_len: f32,
+    pub timeframe_tooltip_width: f32,
+    pub new_lang_input_width: f32,
+    pub quatrains_frame_size: (f32, f32),
 }
 
 lazy_static! {

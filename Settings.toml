@@ -1,0 +1,29 @@
+[state]
+default_lyrics_text_size=1000
+save_file_ext="json"
+default_tab_lang="en"
+
+[dialogs]
+base_dir="."
+save_file_ext_filter="*.json"
+dialog_sizes=[275.0, 165.0]
+file_browser_width=260.0
+
+[player]
+player_frame_size=[340.0, 100.0]
+default_volume=50.0
+
+[console]
+console_size=[340.0, 172.0]
+
+[main_window]
+tooltip_len=15
+lang_name_len=5
+main_window_size=[620.0,565.0]
+lyrics_input_width=550.0
+lyrics_input_height=530.0
+column_offset=560.0
+song_path_input_len=300.0
+timeframe_tooltip_width=100.0
+new_lang_input_width=40.0
+quatrains_frame_size=[340.0,200.0]
