@@ -72,23 +72,23 @@ lazy_static! {
                 file_browser_width: dialogs.file_browser_width.unwrap_or(260.0),
             },
             player: Player {
-                player_frame_size: player.player_frame_size.unwrap_or((340.0, 100.0)),
+                player_frame_size: player.player_frame_size.unwrap_or((340.0, 105.0)),
                 default_volume: player.default_volume.unwrap_or(50.0)
             },
             console: Console {
                 console_size: console.console_size.unwrap_or((340.0, 172.0)),
             },
             main_window: MainWindow {
+                main_window_size: main_window.main_window_size.unwrap_or((620.0, 565.0)),
+                quatrains_frame_size: main_window.quatrains_frame_size.unwrap_or((340.0, 190.0)),
                 tooltip_len: main_window.tooltip_len.unwrap_or(15),
                 lang_name_len: main_window.lang_name_len.unwrap_or(5),
-                main_window_size: main_window.main_window_size.unwrap_or((620.0, 565.0)),
                 lyrics_input_width: main_window.lyrics_input_width.unwrap_or(550.0),
                 lyrics_input_height: main_window.lyrics_input_height.unwrap_or(530.0),
                 column_offset: main_window.column_offset.unwrap_or(560.0),
                 song_path_input_len: main_window.song_path_input_len.unwrap_or(300.0),
                 timeframe_tooltip_width: main_window.timeframe_tooltip_width.unwrap_or(100.0),
                 new_lang_input_width: main_window.new_lang_input_width.unwrap_or(40.0),
-                quatrains_frame_size: main_window.quatrains_frame_size.unwrap_or((340.0, 200.0)),
             }
         }
     };
