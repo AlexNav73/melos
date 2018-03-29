@@ -1,6 +1,6 @@
 [package]
 name = "melos"
-version = "0.1.0-pre"
+version = "0.1.0"
 authors = ["AlexNav73 <fifthhorseman@mail.ru>"]
 
 [dependencies]
