@@ -1,6 +1,6 @@
 [package]
 name = "melos"
-version = "0.1.0-pre"
+version = "0.1.0"
 authors = ["AlexNav73 <fifthhorseman@mail.ru>"]
 
 [dependencies]
@@ -12,6 +12,10 @@ imgui-gfx-renderer = { git = "https://github.com/AlexNav73/imgui-rs.git" }
 serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
+ignore = "0.4.1"
+config = "0.8.0"
+lazy_static = "1.0.0"
+failure = "0.1.1"
 
 [dependencies.rodio]
 git = "https://github.com/AlexNav73/rodio.git"

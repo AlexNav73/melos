@@ -6,7 +6,8 @@ use imgui::*;
 
 use support_gfx::AppContext;
 use state::State;
-use song::{Song, TimeSpan};
+use song::{Song, SongMsg, TimeSpan};
+use configuration::CONFIG;
 
 pub struct Player {
     song: Song,
@@ -14,7 +15,7 @@ pub struct Player {
     start: f32,
     end: f32,
     volume: f32,
-    loaded_event: Option<Receiver<()>>
+    loaded_event: Option<Receiver<SongMsg>>
 }
 
 impl Player {
@@ -22,7 +23,7 @@ impl Player {
     pub fn new(state: State) -> Self {
         Player {
             song: Song::new(),
-            volume: 50.0,
+            volume: CONFIG.player.default_volume,
             start: 0.0,
             end: 0.0,
             loaded_event: None,
@@ -81,8 +82,11 @@ impl Player {
     #[inline]
     fn log_load_status(&mut self) {
         if let Some(ref e) = self.loaded_event {
-            if let Ok(_) = e.try_recv() {
-                self.state.log("Song was loaded".into());
+            if let Ok(msg) = e.try_recv() {
+                match msg {
+                    SongMsg::Loaded => self.state.log("Song was loaded".into()),
+                    SongMsg::Failed(e) => self.state.log(format!("{}", e))
+                }
             }
         }
     }
@@ -102,7 +106,7 @@ fn to_f(time: u32) -> f32 {
 
 impl AppContext for Player {
     fn show<'a>(&mut self, ui: &Ui<'a>) -> bool {
-        ui.child_frame(im_str!("player"), (340.0, 100.0))
+        ui.child_frame(im_str!("player"), CONFIG.player.player_frame_size)
             .show_borders(true)
             .build(|| {
                 ui.progress_bar(self.progress())

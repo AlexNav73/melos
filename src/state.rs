@@ -6,9 +6,10 @@ use std::cell::{RefCell, Ref, RefMut};
 
 use serde_json;
 use imgui::*;
+use failure::{Error, err_msg};
 
-const DEFAULT_LYRICS_TEXT_SIZE: usize = 10000;
-const SAVE_FILE_EXT: &str = "json";
+use constants::*;
+use configuration::CONFIG;
 
 #[derive(Serialize, Deserialize)]
 struct AppData {
@@ -48,7 +49,7 @@ impl<'a> From<&'a ImLanguageTab> for LanguageTab {
 
 impl From<LanguageTab> for ImLanguageTab {
     fn from(tab: LanguageTab) -> Self {
-        let mut text = ImString::with_capacity(DEFAULT_LYRICS_TEXT_SIZE);
+        let mut text = ImString::with_capacity(CONFIG.state.default_lyrics_text_size);
         text.push_str(&tab.text);
         ImLanguageTab {
             lang: ImString::new(tab.lang),
@@ -62,7 +63,7 @@ impl ImLanguageTab {
         where L: AsRef<str>,
               T: AsRef<str>
     {
-        let mut t = ImString::with_capacity(DEFAULT_LYRICS_TEXT_SIZE);
+        let mut t = ImString::with_capacity(CONFIG.state.default_lyrics_text_size);
         t.push_str(text.as_ref());
         ImLanguageTab {
             lang: ImString::new(lang.as_ref()),
@@ -73,7 +74,7 @@ impl ImLanguageTab {
 
 impl Default for ImLanguageTab {
     fn default() -> Self {
-        ImLanguageTab::new("en", "")
+        ImLanguageTab::new(&CONFIG.state.default_tab_lang, "")
     }
 }
 
@@ -105,24 +106,26 @@ impl State {
         lyrics.push(ImLanguageTab::default());
         State(Rc::new(RefCell::new(InnerState {
             timings: Vec::new(),
-            path: ImString::with_capacity(256),
+            path: ImString::with_capacity(MAX_PATH_LEN),
             logs: Vec::new(),
             lyrics,
         })))
     }
 
-    pub fn save<P: AsRef<Path>>(&mut self, path: P) {
+    pub fn save<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Error> {
         use std::io::Write;
 
-        let mut file = File::create(path.as_ref().with_extension(SAVE_FILE_EXT)).expect("Could not create file");
-        file.write(serde_json::to_string(&self.to_app_data()).unwrap().as_bytes()).unwrap();
+        let path = path.as_ref().with_extension(SAVE_FILE_EXT);
+        let mut file = File::create(path)
+            .map_err(|_| err_msg("Could not create file"))?;
+        let json = serde_json::to_string(&self.to_app_data())
+            .map_err(|_| err_msg("Can't serialize project data"))?;
+        file.write(json.as_bytes()).map_err(|_| err_msg("Can't save project to file"))?;
+        Ok(())
     }
 
-    pub fn open<P: AsRef<Path>>(&self, path: P) -> bool {
-        load(path)
-            .map(|data| { self.update(data); true })
-            .map_err(|_| false)
-            .unwrap()
+    pub fn open<P: AsRef<Path>>(&self, path: P) -> Result<bool, Error> {
+        load(path).map(|data| { self.update(data); true })
     }
 
     #[inline]
@@ -172,17 +175,21 @@ impl State {
     fn update(&self, saved_state: AppData) {
         let mut this = self.0.borrow_mut();
         this.lyrics = saved_state.lyrics.into_iter().map(|t| t.into()).collect();
-        this.path = ImString::with_capacity(256);
+        this.path = ImString::with_capacity(MAX_PATH_LEN);
         this.path.push_str(&saved_state.path);
         this.timings = saved_state.timings.into_iter().collect();
     }
 }
 
-fn load<P: AsRef<Path>>(path: P) -> Result<AppData, ()> {
+fn load<P: AsRef<Path>>(path: P) -> Result<AppData, Error> {
     use std::io::Read;
 
-    let mut file = File::open(path.as_ref().with_extension(SAVE_FILE_EXT)).map_err(|_| ())?;
-    let mut json = String::with_capacity(file.metadata().unwrap().len() as usize);
-    file.read_to_string(&mut json).map_err(|_| ())?;
-    serde_json::from_str::<AppData>(&json).map_err(|_| ())
+    let path = path.as_ref().with_extension(SAVE_FILE_EXT);
+    ensure!(path.exists(), "Path is invalid");
+
+    let mut file = File::open(path).map_err(|_| err_msg("Can't open file"))?;
+    let metadata = file.metadata().map_err(|_| err_msg("Can't get file metadata"))?;
+    let mut json = String::with_capacity(metadata.len() as usize);
+    file.read_to_string(&mut json).map_err(|_| err_msg("Can't read save file"))?;
+    serde_json::from_str::<AppData>(&json).map_err(|_| err_msg("Can't deserialize project data"))
 }

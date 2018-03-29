@@ -10,6 +10,12 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
+extern crate ignore;
+extern crate config;
+#[macro_use]
+extern crate lazy_static;
+#[macro_use]
+extern crate failure;
 
 mod player;
 mod support_gfx;
@@ -19,6 +25,8 @@ mod state;
 mod console;
 mod song;
 mod fonts;
+mod constants;
+mod configuration;
 
 use imgui::*;
 
@@ -44,10 +52,10 @@ impl AppContext for Program {
                         self.main_window = Some(MainWindow::new(self.state.clone()));
                     }
                     if ui.menu_item(im_str!("Save")).build() {
-                        self.save_file_dialog.opened = true;
+                        self.save_file_dialog.open();
                     }
                     if ui.menu_item(im_str!("Open")).build() {
-                        self.open_file_dialog.opened = true;
+                        self.open_file_dialog.open();
                     }
                     if ui.menu_item(im_str!("Exit")).build() {
                         opened = false;
