@@ -52,12 +52,10 @@ impl AppContext for Program {
                         self.main_window = Some(MainWindow::new(self.state.clone()));
                     }
                     if ui.menu_item(im_str!("Save")).build() {
-                        self.save_file_dialog.update_cached_paths();
-                        self.save_file_dialog.opened = true;
+                        self.save_file_dialog.open();
                     }
                     if ui.menu_item(im_str!("Open")).build() {
-                        self.open_file_dialog.update_cached_paths();
-                        self.open_file_dialog.opened = true;
+                        self.open_file_dialog.open();
                     }
                     if ui.menu_item(im_str!("Exit")).build() {
                         opened = false;

@@ -28,6 +28,11 @@ impl OpenFileDialog {
         }
     }
 
+    pub fn open(&mut self) {
+        self.opened = true;
+        self.update_cached_paths();
+    }
+
     pub fn show<'a>(&mut self, ui: &Ui<'a>) -> bool {
         let mut opened = self.opened;
         if opened {
@@ -104,6 +109,11 @@ impl SaveFileDialog {
             cached_paths: Vec::new(),
             state
         }
+    }
+
+    pub fn open(&mut self) {
+        self.opened = true;
+        self.update_cached_paths();
     }
 
     pub fn show<'a>(&mut self, ui: &Ui<'a>) -> bool {
