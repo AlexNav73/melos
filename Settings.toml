@@ -1,11 +1,8 @@
 [state]
 default_lyrics_text_size=1000
-save_file_ext="json"
-default_tab_lang="en"
 
 [dialogs]
 base_dir="."
-save_file_ext_filter="*.json"
 dialog_sizes=[275.0, 165.0]
 file_browser_width=260.0
 

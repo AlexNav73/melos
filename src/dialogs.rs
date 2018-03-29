@@ -4,7 +4,7 @@ use ignore::WalkBuilder;
 use ignore::overrides::OverrideBuilder;
 
 use state::State;
-use constants::global::*;
+use constants::*;
 use configuration::CONFIG;
 
 pub struct OpenFileDialog {
@@ -144,7 +144,7 @@ impl SaveFileDialog {
 
 fn enumerate_files() -> Vec<ImString> {
     let filters = OverrideBuilder::new(&CONFIG.dialogs.base_dir)
-        .add(&CONFIG.dialogs.save_file_ext_filter).unwrap()
+        .add(SAVE_FILE_EXT_FILTER).unwrap()
         .build().unwrap();
 
     WalkBuilder::new(&CONFIG.dialogs.base_dir)

@@ -9,8 +9,7 @@ use super::sources::{
     PausableSource
 };
 
-use rodio;
-use rodio::Source;
+use rodio::{self, Source};
 
 use std::fs::File;
 use std::path::{Path, PathBuf};

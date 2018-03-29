@@ -7,7 +7,7 @@ use std::cell::{RefCell, Ref, RefMut};
 use serde_json;
 use imgui::*;
 
-use constants::global::*;
+use constants::*;
 use configuration::CONFIG;
 
 #[derive(Serialize, Deserialize)]
@@ -114,7 +114,7 @@ impl State {
     pub fn save<P: AsRef<Path>>(&mut self, path: P) {
         use std::io::Write;
 
-        let path = path.as_ref().with_extension(&CONFIG.state.save_file_ext);
+        let path = path.as_ref().with_extension(SAVE_FILE_EXT);
         let mut file = File::create(path).expect("Could not create file");
         file.write(serde_json::to_string(&self.to_app_data()).unwrap().as_bytes()).unwrap();
     }
@@ -182,7 +182,7 @@ impl State {
 fn load<P: AsRef<Path>>(path: P) -> Result<AppData, ()> {
     use std::io::Read;
 
-    let path = path.as_ref().with_extension(&CONFIG.state.save_file_ext);
+    let path = path.as_ref().with_extension(SAVE_FILE_EXT);
     let mut file = File::open(path).map_err(|_| ())?;
     let mut json = String::with_capacity(file.metadata().unwrap().len() as usize);
     file.read_to_string(&mut json).map_err(|_| ())?;
