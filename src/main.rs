@@ -14,6 +14,8 @@ extern crate ignore;
 extern crate config;
 #[macro_use]
 extern crate lazy_static;
+#[macro_use]
+extern crate failure;
 
 mod player;
 mod support_gfx;

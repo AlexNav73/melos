@@ -40,7 +40,10 @@ impl OpenFileDialog {
                     ui.input_text(im_str!("##path"), &mut self.path).build();
                     ui.same_line(0.0);
                     if ui.button(im_str!("open"), (0.0, 0.0)) {
-                        self.load = self.state.open(self.path.to_str());
+                        match self.state.open(self.path.to_str()) {
+                            Ok(loaded) => self.load = loaded,
+                            Err(e) => self.state.log(format!("{}", e))
+                        }
                     }
                     ui.with_item_width(CONFIG.dialogs.file_browser_width, || self.show_file_browser(ui));
                 });
@@ -115,7 +118,10 @@ impl SaveFileDialog {
                     ui.input_text(im_str!("##path"), &mut self.path).build();
                     ui.same_line(0.0);
                     if ui.button(im_str!("save"), (0.0, 0.0)) {
-                        self.state.save(self.path.to_str());
+                        match self.state.save(self.path.to_str()) {
+                            Ok(_) => self.state.log("Project saved successfully".into()),
+                            Err(e) => self.state.log(format!("{}", e))
+                        }
                         self.update_cached_paths();
                     }
                     ui.with_item_width(CONFIG.dialogs.file_browser_width, || self.show_file_browser(ui));
@@ -144,8 +150,8 @@ impl SaveFileDialog {
 
 fn enumerate_files() -> Vec<ImString> {
     let filters = OverrideBuilder::new(&CONFIG.dialogs.base_dir)
-        .add(SAVE_FILE_EXT_FILTER).unwrap()
-        .build().unwrap();
+        .add(SAVE_FILE_EXT_FILTER).expect("Save file filter is invalid")
+        .build().expect("Can't build filters");
 
     WalkBuilder::new(&CONFIG.dialogs.base_dir)
         .max_depth(Some(1))
@@ -155,6 +161,6 @@ fn enumerate_files() -> Vec<ImString> {
         .into_iter()
         .filter_map(|e| e.ok())
         .filter(|e| e.path().is_file())
-        .map(|e| ImString::new(e.path().to_str().unwrap()))
+        .map(|e| ImString::new(e.path().to_str().expect("Can't cast path to str")))
         .collect()
 }

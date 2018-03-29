@@ -6,7 +6,7 @@ use imgui::*;
 
 use support_gfx::AppContext;
 use state::State;
-use song::{Song, TimeSpan};
+use song::{Song, SongMsg, TimeSpan};
 use configuration::CONFIG;
 
 pub struct Player {
@@ -15,7 +15,7 @@ pub struct Player {
     start: f32,
     end: f32,
     volume: f32,
-    loaded_event: Option<Receiver<()>>
+    loaded_event: Option<Receiver<SongMsg>>
 }
 
 impl Player {
@@ -82,8 +82,11 @@ impl Player {
     #[inline]
     fn log_load_status(&mut self) {
         if let Some(ref e) = self.loaded_event {
-            if let Ok(_) = e.try_recv() {
-                self.state.log("Song was loaded".into());
+            if let Ok(msg) = e.try_recv() {
+                match msg {
+                    SongMsg::Loaded => self.state.log("Song was loaded".into()),
+                    SongMsg::Failed(e) => self.state.log(format!("{}", e))
+                }
             }
         }
     }

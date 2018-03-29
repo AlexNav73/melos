@@ -6,6 +6,7 @@ use std::cell::{RefCell, Ref, RefMut};
 
 use serde_json;
 use imgui::*;
+use failure::{Error, err_msg};
 
 use constants::*;
 use configuration::CONFIG;
@@ -111,19 +112,20 @@ impl State {
         })))
     }
 
-    pub fn save<P: AsRef<Path>>(&mut self, path: P) {
+    pub fn save<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Error> {
         use std::io::Write;
 
         let path = path.as_ref().with_extension(SAVE_FILE_EXT);
-        let mut file = File::create(path).expect("Could not create file");
-        file.write(serde_json::to_string(&self.to_app_data()).unwrap().as_bytes()).unwrap();
+        let mut file = File::create(path)
+            .map_err(|_| err_msg("Could not create file"))?;
+        let json = serde_json::to_string(&self.to_app_data())
+            .map_err(|_| err_msg("Can't serialize project data"))?;
+        file.write(json.as_bytes()).map_err(|_| err_msg("Can't save project to file"))?;
+        Ok(())
     }
 
-    pub fn open<P: AsRef<Path>>(&self, path: P) -> bool {
-        load(path)
-            .map(|data| { self.update(data); true })
-            .map_err(|_| false)
-            .unwrap()
+    pub fn open<P: AsRef<Path>>(&self, path: P) -> Result<bool, Error> {
+        load(path).map(|data| { self.update(data); true })
     }
 
     #[inline]
@@ -179,12 +181,15 @@ impl State {
     }
 }
 
-fn load<P: AsRef<Path>>(path: P) -> Result<AppData, ()> {
+fn load<P: AsRef<Path>>(path: P) -> Result<AppData, Error> {
     use std::io::Read;
 
     let path = path.as_ref().with_extension(SAVE_FILE_EXT);
-    let mut file = File::open(path).map_err(|_| ())?;
-    let mut json = String::with_capacity(file.metadata().unwrap().len() as usize);
-    file.read_to_string(&mut json).map_err(|_| ())?;
-    serde_json::from_str::<AppData>(&json).map_err(|_| ())
+    ensure!(path.exists(), "Path is invalid");
+
+    let mut file = File::open(path).map_err(|_| err_msg("Can't open file"))?;
+    let metadata = file.metadata().map_err(|_| err_msg("Can't get file metadata"))?;
+    let mut json = String::with_capacity(metadata.len() as usize);
+    file.read_to_string(&mut json).map_err(|_| err_msg("Can't read save file"))?;
+    serde_json::from_str::<AppData>(&json).map_err(|_| err_msg("Can't deserialize project data"))
 }

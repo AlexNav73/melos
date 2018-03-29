@@ -1,4 +1,15 @@
 
+use rodio::{self, Source};
+use failure::{Error, err_msg};
+
+use std::fs::File;
+use std::path::{Path, PathBuf};
+use std::io::BufReader;
+use std::time::Duration;
+use std::sync::Arc;
+use std::sync::atomic::Ordering;
+use std::sync::mpsc::{channel, Receiver};
+
 use super::{TimeSpan, FloatWindow, Inspectable};
 use super::controls::Controls;
 use super::sources::{
@@ -9,15 +20,10 @@ use super::sources::{
     PausableSource
 };
 
-use rodio::{self, Source};
-
-use std::fs::File;
-use std::path::{Path, PathBuf};
-use std::io::BufReader;
-use std::time::Duration;
-use std::sync::Arc;
-use std::sync::atomic::Ordering;
-use std::sync::mpsc::{channel, Receiver};
+pub enum SongMsg {
+    Loaded,
+    Failed(Error)
+}
 
 pub struct Song {
     controls: Arc<Controls>,
@@ -29,7 +35,7 @@ impl Song {
     }
 
     #[allow(deprecated)]
-    pub fn open<P: AsRef<Path>>(&self, path: P) -> Receiver<()> {
+    pub fn open<P: AsRef<Path>>(&self, path: P) -> Receiver<SongMsg> {
         use std::thread;
 
         let path: PathBuf = path.as_ref().into();
@@ -37,35 +43,44 @@ impl Song {
         let (tx, rx) = channel();
 
         thread::spawn(move || {
-            let file = File::open(path).expect("Invalid file name");
-            let decoder = rodio::Decoder::new(BufReader::new(file)).unwrap();
+            let th = move || -> Result<(), Error> {
+                ensure!(path.exists(), "File not found");
 
-            let samples_rate = decoder.samples_rate();
-            let channels = decoder.channels();
-            let samples = decoder.collect::<Vec<_>>();
-            let controls2 = controls.clone();
+                let file = File::open(path)?;
+                let decoder = rodio::Decoder::new(BufReader::new(file))?;
 
-            let source = BaseSource::new(channels, samples_rate, samples);
-            let source = FloatWindowSource::new(source);
-            let source = SmartSource::new(source, controls.clone());
-            let source = StoppableSource::new(source);
-            let source = PausableSource::new(source)
-                .amplify(1.0)
-                .periodic_access(Duration::from_millis(5), move |src| {
-                    src.inner_mut().stop(controls.stopped());
-                    src.inner_mut().pause(controls.paused());
-                    src.inner_mut().play(controls.time());
-                    src.set_factor(controls.volume());
-                })
+                let samples_rate = decoder.samples_rate();
+                let channels = decoder.channels();
+                let samples = decoder.collect::<Vec<_>>();
+                let controls2 = controls.clone();
+
+                let source = BaseSource::new(channels, samples_rate, samples);
+                let source = FloatWindowSource::new(source);
+                let source = SmartSource::new(source, controls.clone());
+                let source = StoppableSource::new(source);
+                let source = PausableSource::new(source)
+                    .amplify(1.0)
+                    .periodic_access(Duration::from_millis(5), move |src| {
+                        src.inner_mut().stop(controls.stopped());
+                        src.inner_mut().pause(controls.paused());
+                        src.inner_mut().play(controls.time());
+                        src.set_factor(controls.volume());
+                    })
                 .periodic_access(Duration::from_millis(995), move |src| {
                     controls2.set_progress(src.inner().inner().current_sec() as u32);
                 })
                 .convert_samples();
 
-            let endpoint = rodio::get_endpoints_list().next().unwrap();
-            rodio::play_raw(&endpoint, source);
+                let endpoint = rodio::get_endpoints_list()
+                    .next()
+                    .ok_or(err_msg("Can't get endpoints list"))?;
+                Ok(rodio::play_raw(&endpoint, source))
+            };
 
-            tx.send(()).unwrap();
+            match th() {
+                Ok(_) => tx.send(SongMsg::Loaded).expect("Can't send signal"),
+                Err(e) => tx.send(SongMsg::Failed(e)).expect("Can't send signal")
+            }
         });
 
         rx

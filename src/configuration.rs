@@ -51,9 +51,10 @@ pub struct MainWindow {
 lazy_static! {
     pub static ref CONFIG: Config = {
         let mut config = Config_::new();
-        config.merge(File::with_name("Settings.toml").required(false)).unwrap();
+        config.merge(File::with_name("Settings.toml").required(false))
+            .expect("Can't merge settings file path");
 
-        let map: Settings = config.try_into().unwrap();
+        let map: Settings = config.try_into().expect("Can't parse settings file");
         let state = map.state.unwrap_or(State_::default());
         let dialogs = map.dialogs.unwrap_or(Dialogs_::default());
         let player = map.player.unwrap_or(Player_::default());
@@ -98,7 +99,8 @@ struct Settings {
     state: Option<State_>,
     dialogs: Option<Dialogs_>,
     player: Option<Player_>,
-    console: Option<Console_>, main_window: Option<MainWindow_>
+    console: Option<Console_>,
+    main_window: Option<MainWindow_>
 }
 
 #[derive(Debug, Default, Deserialize)]
