@@ -8,8 +8,6 @@ use constants::*;
 use configuration::CONFIG;
 
 pub struct OpenFileDialog {
-    pub opened: bool,
-    load: bool,
     path: ImString,
     cached_paths: Vec<ImString>,
     selected_item: i32,
@@ -19,50 +17,33 @@ pub struct OpenFileDialog {
 impl OpenFileDialog {
     pub fn new(state: State) -> Self {
         OpenFileDialog {
-            opened: false,
-            load: false,
             path: ImString::with_capacity(MAX_PATH_LEN),
-            cached_paths: Vec::new(),
+            cached_paths: enumerate_files(),
             selected_item: 0,
             state
         }
     }
 
-    pub fn open(&mut self) {
-        self.opened = true;
-        self.update_cached_paths();
-    }
-
-    pub fn show<'a>(&mut self, ui: &Ui<'a>) -> bool {
-        let mut opened = self.opened;
-        if opened {
-            ui.window(im_str!("Open File"))
-                .size(CONFIG.dialogs.dialog_sizes, ImGuiCond::Always)
-                .opened(&mut opened)
-                .collapsible(false)
-                .resizable(false)
-                .build(|| {
-                    ui.input_text(im_str!("##path"), &mut self.path).build();
-                    ui.same_line(0.0);
-                    if ui.button(im_str!("open"), (0.0, 0.0)) {
-                        match self.state.open(self.path.to_str()) {
-                            Ok(loaded) => self.load = loaded,
-                            Err(e) => self.state.log(format!("{}", e))
-                        }
+    pub fn show<'a>(&mut self, ui: &Ui<'a>) -> (bool, bool) {
+        let mut opened = true;
+        let mut on_click = false;
+        ui.window(im_str!("Open File"))
+            .size(CONFIG.dialogs.dialog_sizes, ImGuiCond::Always)
+            .opened(&mut opened)
+            .collapsible(false)
+            .resizable(false)
+            .build(|| {
+                ui.input_text(im_str!("##path"), &mut self.path).build();
+                ui.same_line(0.0);
+                if ui.button(im_str!("open"), (0.0, 0.0)) {
+                    match self.state.open(self.path.to_str()) {
+                        Ok(_) => on_click = true,
+                        Err(e) => self.state.log(format!("{}", e))
                     }
-                    ui.with_item_width(CONFIG.dialogs.file_browser_width, || self.show_file_browser(ui));
-                });
-        }
-        self.opened = !(self.load || !opened);
-        self.opened
-    }
-
-    pub fn should_load(&mut self) -> bool {
-        if self.load {
-            self.load = false;
-            return true;
-        }
-        false
+                }
+                ui.with_item_width(CONFIG.dialogs.file_browser_width, || self.show_file_browser(ui));
+            });
+        (opened, on_click)
     }
 
     pub fn update_cached_paths(&mut self) {
@@ -93,8 +74,6 @@ impl OpenFileDialog {
 }
 
 pub struct SaveFileDialog {
-    pub opened: bool,
-    saved: bool,
     path: ImString,
     cached_paths: Vec<ImString>,
     state: State
@@ -103,42 +82,36 @@ pub struct SaveFileDialog {
 impl SaveFileDialog {
     pub fn new(state: State) -> Self {
         SaveFileDialog {
-            opened: false,
-            saved: false,
             path: ImString::with_capacity(MAX_PATH_LEN),
-            cached_paths: Vec::new(),
+            cached_paths: enumerate_files(),
             state
         }
     }
 
-    pub fn open(&mut self) {
-        self.opened = true;
-        self.update_cached_paths();
-    }
-
     pub fn show<'a>(&mut self, ui: &Ui<'a>) -> bool {
-        let mut opened = self.opened;
-        if opened {
-            ui.window(im_str!("Save File"))
-                .size(CONFIG.dialogs.dialog_sizes, ImGuiCond::Always)
-                .opened(&mut opened)
-                .collapsible(false)
-                .resizable(false)
-                .build(|| {
-                    ui.input_text(im_str!("##path"), &mut self.path).build();
-                    ui.same_line(0.0);
-                    if ui.button(im_str!("save"), (0.0, 0.0)) {
-                        match self.state.save(self.path.to_str()) {
-                            Ok(_) => self.state.log("Project saved successfully".into()),
-                            Err(e) => self.state.log(format!("{}", e))
-                        }
-                        self.update_cached_paths();
+        let mut opened = true;
+        let mut saved = false;
+        ui.window(im_str!("Save File"))
+            .size(CONFIG.dialogs.dialog_sizes, ImGuiCond::Always)
+            .opened(&mut opened)
+            .collapsible(false)
+            .resizable(false)
+            .build(|| {
+                ui.input_text(im_str!("##path"), &mut self.path).build();
+                ui.same_line(0.0);
+                if ui.button(im_str!("save"), (0.0, 0.0)) {
+                    match self.state.save(self.path.to_str()) {
+                        Ok(_) => {
+                            saved = true;
+                            self.state.log("Project saved successfully".into());
+                        },
+                        Err(e) => self.state.log(format!("{}", e))
                     }
-                    ui.with_item_width(CONFIG.dialogs.file_browser_width, || self.show_file_browser(ui));
-                });
-        }
-        self.opened = !(self.saved || !opened);
-        self.opened
+                    self.update_cached_paths();
+                }
+                ui.with_item_width(CONFIG.dialogs.file_browser_width, || self.show_file_browser(ui));
+            });
+        opened ^ saved
     }
 
     pub fn update_cached_paths(&mut self) {
