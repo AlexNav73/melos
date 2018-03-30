@@ -33,12 +33,11 @@ use imgui::*;
 use state::State;
 use support_gfx::AppContext;
 use main_window::MainWindow;
-use dialogs::{OpenFileDialog, SaveFileDialog};
+use dialogs::OpenFileDialog;
 
 pub struct Program {
     state: State,
-    open_file_dialog: OpenFileDialog,
-    save_file_dialog: SaveFileDialog,
+    open_file_dialog: Option<OpenFileDialog>,
     main_window: Option<MainWindow>,
 }
 
@@ -51,11 +50,8 @@ impl AppContext for Program {
                     if ui.menu_item(im_str!("New")).build() {
                         self.main_window = Some(MainWindow::new(self.state.clone()));
                     }
-                    if ui.menu_item(im_str!("Save")).build() {
-                        self.save_file_dialog.open();
-                    }
                     if ui.menu_item(im_str!("Open")).build() {
-                        self.open_file_dialog.open();
+                        self.open_file_dialog = Some(OpenFileDialog::new(self.state.clone()));
                     }
                     if ui.menu_item(im_str!("Exit")).build() {
                         opened = false;
@@ -63,19 +59,19 @@ impl AppContext for Program {
                 });
         });
 
-        self.open_file_dialog.show(ui);
-        self.save_file_dialog.show(ui);
-
-        if self.open_file_dialog.should_load() {
-            self.main_window = Some(MainWindow::load(self.state.clone()));
+        if let Some(mut ofd) = self.open_file_dialog.take() {
+            match ofd.show(ui) {
+                (true, true) => self.main_window = Some(MainWindow::load(self.state.clone())),
+                (true, false) => self.open_file_dialog = Some(ofd),
+                (false, true) => unreachable!(),
+                (false, false) => {}
+            }
         }
 
-        let mut main_window_opened = false;
-        if let Some(ref mut main_window) = self.main_window {
-            main_window_opened = main_window.show(ui);
-        }
-        if !main_window_opened {
-            self.main_window = None;
+        if let Some(mut window) = self.main_window.take() {
+            if window.show(ui) {
+                self.main_window = Some(window);
+            }
         }
 
         opened
@@ -84,11 +80,9 @@ impl AppContext for Program {
 
 impl Program {
     fn new() -> Self {
-        let state = State::new();
         Program {
-            state: state.clone(),
-            save_file_dialog: SaveFileDialog::new(state.clone()),
-            open_file_dialog: OpenFileDialog::new(state),
+            state: State::new(),
+            open_file_dialog: None,
             main_window: None,
         }
     }

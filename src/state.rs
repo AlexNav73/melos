@@ -102,30 +102,22 @@ pub struct State(Rc<RefCell<InnerState>>);
 
 impl State {
     pub fn new() -> Self {
-        let mut lyrics = Vec::new();
-        lyrics.push(ImLanguageTab::default());
-        State(Rc::new(RefCell::new(InnerState {
+        let inner = InnerState {
             timings: Vec::new(),
             path: ImString::with_capacity(MAX_PATH_LEN),
             logs: Vec::new(),
-            lyrics,
-        })))
+            lyrics: vec![ImLanguageTab::default()],
+        };
+        State(Rc::new(RefCell::new(inner)))
     }
 
     pub fn save<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Error> {
-        use std::io::Write;
-
-        let path = path.as_ref().with_extension(SAVE_FILE_EXT);
-        let mut file = File::create(path)
-            .map_err(|_| err_msg("Could not create file"))?;
-        let json = serde_json::to_string(&self.to_app_data())
-            .map_err(|_| err_msg("Can't serialize project data"))?;
-        file.write(json.as_bytes()).map_err(|_| err_msg("Can't save project to file"))?;
+        write_state_to_file(self.to_app_data(), path)?;
         Ok(())
     }
 
-    pub fn open<P: AsRef<Path>>(&self, path: P) -> Result<bool, Error> {
-        load(path).map(|data| { self.update(data); true })
+    pub fn open<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {
+        read_state_from_file(path).map(|data| self.update(data))
     }
 
     #[inline]
@@ -181,7 +173,7 @@ impl State {
     }
 }
 
-fn load<P: AsRef<Path>>(path: P) -> Result<AppData, Error> {
+fn read_state_from_file<P: AsRef<Path>>(path: P) -> Result<AppData, Error> {
     use std::io::Read;
 
     let path = path.as_ref().with_extension(SAVE_FILE_EXT);
@@ -192,4 +184,15 @@ fn load<P: AsRef<Path>>(path: P) -> Result<AppData, Error> {
     let mut json = String::with_capacity(metadata.len() as usize);
     file.read_to_string(&mut json).map_err(|_| err_msg("Can't read save file"))?;
     serde_json::from_str::<AppData>(&json).map_err(|_| err_msg("Can't deserialize project data"))
+}
+
+fn write_state_to_file<P: AsRef<Path>>(state: AppData, path: P) -> Result<(), Error> {
+    use std::io::Write;
+
+    let path = path.as_ref().with_extension(SAVE_FILE_EXT);
+    let mut file = File::create(path).map_err(|_| err_msg("Could not create file"))?;
+    let json = serde_json::to_string(&state).map_err(|_| err_msg("Can't serialize project data"))?;
+    file.write(json.as_bytes())
+        .map(|_| ())
+        .map_err(|_| err_msg("Can't save project to file"))
 }

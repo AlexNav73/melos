@@ -1,16 +1,18 @@
 
 use imgui::*;
 
-use player::Player;
 use support_gfx::AppContext;
-use state::{State, TimeFrame, ImLanguageTab};
+use player::Player;
 use console::Console;
+use dialogs::SaveFileDialog;
+use state::{State, TimeFrame, ImLanguageTab};
 use configuration::CONFIG;
 
 pub struct MainWindow {
     state: State,
     player: Player,
     console: Console,
+    save_file_dialog: Option<SaveFileDialog>,
     tooltip_input: ImString,
     language: usize,
     lang_name_buf: ImString
@@ -29,6 +31,7 @@ impl MainWindow {
             player: Player::new(state.clone()),
             tooltip_input: ImString::with_capacity(CONFIG.main_window.tooltip_len),
             lang_name_buf: ImString::with_capacity(CONFIG.main_window.lang_name_len),
+            save_file_dialog: None,
             language: 0,
             state,
         }
@@ -41,6 +44,7 @@ impl MainWindow {
             console: Console::new(state.clone()),
             tooltip_input: ImString::with_capacity(CONFIG.main_window.tooltip_len),
             lang_name_buf: ImString::with_capacity(CONFIG.main_window.lang_name_len),
+            save_file_dialog: None,
             language: 0,
             player,
             state,
@@ -91,6 +95,7 @@ impl MainWindow {
                 ui.spacing();
                 self.player.show(ui);
                 self.console.show(ui);
+                self.show_save_file_dialog(ui);
             });
 
         self.state.timings_mut().retain(|x| !x.remove);
@@ -98,8 +103,21 @@ impl MainWindow {
         opened
     }
 
+    fn show_save_file_dialog<'a>(&mut self, ui: &Ui<'a>) {
+        if let Some(mut sfd) = self.save_file_dialog.take() {
+            if sfd.show(ui) {
+                self.save_file_dialog = Some(sfd);
+            }
+        }
+    }
+
     fn show_menu<'a>(&mut self, ui: &Ui<'a>) {
         ui.menu_bar(|| {
+            ui.menu(im_str!("File")).build(|| {
+                if ui.menu_item(im_str!("Save")).build() {
+                    self.save_file_dialog = Some(SaveFileDialog::new(self.state.clone()));
+                }
+            });
             ui.menu(im_str!("Languages")).build(|| {
                 let mut lang_id = self.language;
                 for (idx, tab) in self.state.lyrics().iter().enumerate() {
@@ -125,7 +143,7 @@ impl MainWindow {
             });
             if ui.button(im_str!("X"), (0.0, 0.0)) {
                 self.state.lyrics_mut().remove(self.language);
-                if self.state.lyrics().len() == 0 {
+                if self.state.lyrics().is_empty() {
                     self.state.lyrics_mut().push(ImLanguageTab::default());
                 }
                 self.language = 0;
