@@ -1,0 +1,67 @@
+# Based on the "trust" template v0.1.2
+# https://github.com/japaric/trust/tree/v0.1.2
+
+dist: trusty
+language: rust
+services: docker
+sudo: required
+
+env:
+  global:
+    - CRATE_NAME=melos
+
+matrix:
+  include:
+    # Linux
+    - env: TARGET=i686-unknown-linux-gnu
+    - env: TARGET=x86_64-unknown-linux-gnu
+
+    # Windows
+    - env: TARGET=x86_64-pc-windows-gnu
+
+    # Testing other channels
+    - env: TARGET=x86_64-unknown-linux-gnu
+      rust: nightly
+
+before_install:
+  - set -e
+  - rustup self update
+
+install:
+  - sh ci/install.sh
+  - source ~/.cargo/env || true
+
+script:
+  - bash ci/script.sh
+
+after_script: set +e
+
+before_deploy:
+  - sh ci/before_deploy.sh
+
+deploy:
+  api_key:
+    secure: MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA1RAn3/cmDnFu5AqU12UhUBGouufPAVgVzNaiMZThYxVN8C3mYtrRmzbRo1+fh8WfdKW2I0prF+UvEK5QCO9jd36AFNhhXNlTSvx2PkiJovYDQ3HUhcCwCflSqHUj9VbmvpvwUq+OVwF5f0U1p/qVeNEflnYs5A71Z6xiXlvHx+uohOO/8fk+WtRbr1DHIaJvIZ194YP/Av0UQaVVVbU3/pscSCJ+gm6nmrI2NJiQ2t3FWl+SnlEl6mnspY6XDR8Dp0by89JXTgOpAYi2ASsl+YoHvyU2nLDlI5oKK+Zgk2z0Hy3EF8m5jRZkNHAECgaA5K2MpJ8CLjhz4349eM0RiCPBi9GhoCaQYLYd6M5tKjCGg0YyqdClT/VasCWysCSHR/Iptastbd/p/yQsgvb2CdhRsG3BF7Q0MK+k9YVHDW1pVID2YzzIkMXPrczV6gi9+S01y9PJboAVv1MAI+xZgZ4Rb7AO17E2B3Q2ZrNW5UfP0/TyU0Yy7YctyHrz2hpFuiEH92YEL6beT5oAB+vznXxpLW4gWeAkSiN636Ki0hQ5RiupjYK/SsduGQhvnBsv5JtK/u8p64ujml9C7uWyJypBBRTdYLbKqcSnIv8PjqrBjxbTDfYRkry1IdtER0OINdpMFtgXTbJmc3tS0qFgxj5xqtBrbSG40oR9PtZLTWUCAwEAAQ==
+
+  file_glob: true
+  file: $CRATE_NAME-$TRAVIS_TAG-$TARGET.*
+  on:
+    condition: $TRAVIS_RUST_VERSION = stable
+    tags: true
+  provider: releases
+  skip_cleanup: true
+
+cache: cargo
+before_cache:
+  # Travis can't cache files that are not readable by "others"
+  - chmod -R a+r $HOME/.cargo
+
+branches:
+  only:
+    # release tags
+    - /^v\d+\.\d+\.\d+.*$/
+    - master
+
+notifications:
+  email:
+    on_success: never
