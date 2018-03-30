@@ -63,8 +63,7 @@ impl AppContext for Program {
             match ofd.show(ui) {
                 (true, true) => self.main_window = Some(MainWindow::load(self.state.clone())),
                 (true, false) => self.open_file_dialog = Some(ofd),
-                (false, true) => unreachable!(),
-                (false, false) => {}
+                _ => {}
             }
         }
 
