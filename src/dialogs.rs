@@ -1,9 +1,14 @@
 
+use failure::{Error, err_msg};
 use imgui::*;
 use ignore::WalkBuilder;
 use ignore::overrides::OverrideBuilder;
 
-use state::State;
+use std::fs::File;
+use std::path::Path;
+use serde_json;
+
+use state::AppData;
 use constants::*;
 use configuration::CONFIG;
 
@@ -11,22 +16,26 @@ pub struct OpenFileDialog {
     path: ImString,
     cached_paths: Vec<ImString>,
     selected_item: i32,
-    state: State
+}
+
+pub enum OpenFileState {
+    Displaying,
+    Closed,
+    Opened(AppData)
 }
 
 impl OpenFileDialog {
-    pub fn new(state: State) -> Self {
+    pub fn new() -> Self {
         OpenFileDialog {
             path: ImString::with_capacity(MAX_PATH_LEN),
             cached_paths: enumerate_files(),
             selected_item: 0,
-            state
         }
     }
 
-    pub fn show<'a>(&mut self, ui: &Ui<'a>) -> (bool, bool) {
+    pub fn show<'a>(&mut self, ui: &Ui<'a>) -> OpenFileState {
         let mut opened = true;
-        let mut on_click = false;
+        let mut state = OpenFileState::Displaying;
         ui.window(im_str!("Open File"))
             .size(CONFIG.dialogs.dialog_sizes, ImGuiCond::Always)
             .opened(&mut opened)
@@ -36,14 +45,15 @@ impl OpenFileDialog {
                 ui.input_text(im_str!("##path"), &mut self.path).build();
                 ui.same_line(0.0);
                 if ui.button(im_str!("open"), (0.0, 0.0)) {
-                    match self.state.open(self.path.to_str()) {
-                        Ok(_) => on_click = true,
-                        Err(e) => self.state.log(format!("{}", e))
+                    match read_state_from_file(self.path.to_str()) {
+                        Ok(data) => state = OpenFileState::Opened(data),
+                        Err(e) => println!("{}", e)
                     }
                 }
                 ui.with_item_width(CONFIG.dialogs.file_browser_width, || self.show_file_browser(ui));
             });
-        (opened, on_click)
+
+        if opened { state } else { OpenFileState::Closed }
     }
 
     pub fn update_cached_paths(&mut self) {
@@ -76,19 +86,19 @@ impl OpenFileDialog {
 pub struct SaveFileDialog {
     path: ImString,
     cached_paths: Vec<ImString>,
-    state: State
 }
 
 impl SaveFileDialog {
-    pub fn new(state: State) -> Self {
+    pub fn new() -> Self {
         SaveFileDialog {
             path: ImString::with_capacity(MAX_PATH_LEN),
             cached_paths: enumerate_files(),
-            state
         }
     }
 
-    pub fn show<'a>(&mut self, ui: &Ui<'a>) -> bool {
+    pub fn show<'a, F>(&mut self, ui: &Ui<'a>, get_data: F) -> bool 
+        where F: FnOnce() -> AppData
+    {
         let mut opened = true;
         let mut saved = false;
         ui.window(im_str!("Save File"))
@@ -100,12 +110,12 @@ impl SaveFileDialog {
                 ui.input_text(im_str!("##path"), &mut self.path).build();
                 ui.same_line(0.0);
                 if ui.button(im_str!("save"), (0.0, 0.0)) {
-                    match self.state.save(self.path.to_str()) {
+                    match write_state_to_file(get_data(), self.path.to_str()) {
                         Ok(_) => {
                             saved = true;
-                            self.state.log("Project saved successfully".into());
+                            println!("Project saved successfully");
                         },
-                        Err(e) => self.state.log(format!("{}", e))
+                        Err(e) => println!("{}", e)
                     }
                     self.update_cached_paths();
                 }
@@ -129,6 +139,30 @@ impl SaveFileDialog {
 
         ui.list_box(im_str!("##files"), &mut 0, rpath.as_slice(), 5);
     }
+}
+
+fn read_state_from_file<P: AsRef<Path>>(path: P) -> Result<AppData, Error> {
+    use std::io::Read;
+
+    let path = path.as_ref().with_extension(SAVE_FILE_EXT);
+    ensure!(path.exists(), "Path is invalid");
+
+    let mut file = File::open(path).map_err(|_| err_msg("Can't open file"))?;
+    let metadata = file.metadata().map_err(|_| err_msg("Can't get file metadata"))?;
+    let mut json = String::with_capacity(metadata.len() as usize);
+    file.read_to_string(&mut json).map_err(|_| err_msg("Can't read save file"))?;
+    serde_json::from_str::<AppData>(&json).map_err(|_| err_msg("Can't deserialize project data"))
+}
+
+fn write_state_to_file<P: AsRef<Path>>(state: AppData, path: P) -> Result<(), Error> {
+    use std::io::Write;
+
+    let path = path.as_ref().with_extension(SAVE_FILE_EXT);
+    let mut file = File::create(path).map_err(|_| err_msg("Could not create file"))?;
+    let json = serde_json::to_string(&state).map_err(|_| err_msg("Can't serialize project data"))?;
+    file.write(json.as_bytes())
+        .map(|_| ())
+        .map_err(|_| err_msg("Can't save project to file"))
 }
 
 fn enumerate_files() -> Vec<ImString> {

@@ -5,13 +5,11 @@ use std::sync::mpsc::Receiver;
 use imgui::*;
 
 use support_gfx::AppContext;
-use state::State;
 use song::{Song, SongMsg, TimeSpan};
 use configuration::CONFIG;
 
 pub struct Player {
     song: Song,
-    state: State,
     start: f32,
     end: f32,
     volume: f32,
@@ -20,14 +18,13 @@ pub struct Player {
 
 impl Player {
     #[inline]
-    pub fn new(state: State) -> Self {
+    pub fn new() -> Self {
         Player {
             song: Song::new(),
             volume: CONFIG.player.default_volume,
             start: 0.0,
             end: 0.0,
             loaded_event: None,
-            state,
         }
     }
 
@@ -84,8 +81,8 @@ impl Player {
         if let Some(ref e) = self.loaded_event {
             if let Ok(msg) = e.try_recv() {
                 match msg {
-                    SongMsg::Loaded => self.state.log("Song was loaded".into()),
-                    SongMsg::Failed(e) => self.state.log(format!("{}", e))
+                    SongMsg::Loaded => println!("Song was loaded"),
+                    SongMsg::Failed(e) => println!("{}", e)
                 }
             }
         }

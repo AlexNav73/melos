@@ -5,11 +5,14 @@ use support_gfx::AppContext;
 use player::Player;
 use console::Console;
 use dialogs::SaveFileDialog;
-use state::{State, TimeFrame, ImLanguageTab};
+use state::{TimeFrame, ImLanguageTab, AppData};
 use configuration::CONFIG;
+use constants::MAX_PATH_LEN;
 
 pub struct MainWindow {
-    state: State,
+    lyrics: Vec<ImLanguageTab>,
+    timings: Vec<TimeFrame>,
+    path: ImString,
     player: Player,
     console: Console,
     save_file_dialog: Option<SaveFileDialog>,
@@ -25,29 +28,33 @@ impl AppContext for MainWindow {
 }
 
 impl MainWindow {
-    pub fn new(state: State) -> Self {
+    pub fn new() -> Self {
         MainWindow {
-            console: Console::new(state.clone()),
-            player: Player::new(state.clone()),
+            lyrics: vec![ImLanguageTab::default()],
+            timings: Vec::new(),
+            path: ImString::with_capacity(MAX_PATH_LEN),
+            console: Console::new(),
+            player: Player::new(),
             tooltip_input: ImString::with_capacity(CONFIG.main_window.tooltip_len),
             lang_name_buf: ImString::with_capacity(CONFIG.main_window.lang_name_len),
             save_file_dialog: None,
             language: 0,
-            state,
         }
     }
 
-    pub fn load(state: State) -> Self {
-        let mut player = Player::new(state.clone());
-        player.open(state.path().to_str());
+    pub fn load(data: AppData) -> Self {
+        let mut player = Player::new();
+        player.open(&data.path);
         MainWindow {
-            console: Console::new(state.clone()),
+            lyrics: data.lyrics.into_iter().map(|t| t.into()).collect(),
+            timings: data.timings.into_iter().collect(),
+            path: ImString::new(data.path),
+            console: Console::new(),
             tooltip_input: ImString::with_capacity(CONFIG.main_window.tooltip_len),
             lang_name_buf: ImString::with_capacity(CONFIG.main_window.lang_name_len),
             save_file_dialog: None,
             language: 0,
             player,
-            state,
         }
     }
 
@@ -61,7 +68,7 @@ impl MainWindow {
             .build(|| {
                 self.show_menu(ui);
                 ui.columns(2, im_str!("##container"), false);
-                ui.input_text(im_str!(""), &mut self.state.lyrics_mut()[self.language].text)
+                ui.input_text(im_str!(""), &mut self.lyrics[self.language].text)
                     .multiline(ImVec2::new(
                             CONFIG.main_window.lyrics_input_width,
                             CONFIG.main_window.lyrics_input_height))
@@ -70,11 +77,11 @@ impl MainWindow {
                 let column_idx = ui.get_column_index();
                 ui.set_column_offset(column_idx, CONFIG.main_window.column_offset);
                 ui.with_item_width(CONFIG.main_window.song_path_input_len, || {
-                    ui.input_text(im_str!("##song"), &mut self.state.path_mut()).build();
+                    ui.input_text(im_str!("##song"), &mut self.path).build();
                 });
                 ui.same_line(0.0);
                 if ui.button(im_str!("open"), (0.0, 0.0)) {
-                    self.player.open(self.state.path().to_str());
+                    self.player.open(self.path.to_str());
                 }
                 ui.with_item_width(CONFIG.main_window.timeframe_tooltip_width, || {
                     ui.input_text(im_str!("##tooltip"), &mut self.tooltip_input).build();
@@ -84,9 +91,9 @@ impl MainWindow {
                     {
                         let tooltip = self.tooltip_input.to_str();
                         if tooltip.is_empty() {
-                            self.state.timings_mut().push(TimeFrame::new());
+                            self.timings.push(TimeFrame::new());
                         } else {
-                            self.state.timings_mut().push(TimeFrame::with_tooltip(tooltip));
+                            self.timings.push(TimeFrame::with_tooltip(tooltip));
                         }
                     }
                     self.tooltip_input.clear();
@@ -98,16 +105,24 @@ impl MainWindow {
                 self.show_save_file_dialog(ui);
             });
 
-        self.state.timings_mut().retain(|x| !x.remove);
+        self.timings.retain(|x| !x.remove);
 
         opened
     }
 
     fn show_save_file_dialog<'a>(&mut self, ui: &Ui<'a>) {
         if let Some(mut sfd) = self.save_file_dialog.take() {
-            if sfd.show(ui) {
+            if sfd.show(ui, || self.to_app_data()) {
                 self.save_file_dialog = Some(sfd);
             }
+        }
+    }
+
+    fn to_app_data(&self) -> AppData {
+        AppData {
+            lyrics: self.lyrics.iter().map(|t| t.into()).collect(),
+            timings: self.timings.iter().cloned().collect(),
+            path: self.path.to_str().to_owned()
         }
     }
 
@@ -115,12 +130,12 @@ impl MainWindow {
         ui.menu_bar(|| {
             ui.menu(im_str!("File")).build(|| {
                 if ui.menu_item(im_str!("Save")).build() {
-                    self.save_file_dialog = Some(SaveFileDialog::new(self.state.clone()));
+                    self.save_file_dialog = Some(SaveFileDialog::new());
                 }
             });
             ui.menu(im_str!("Languages")).build(|| {
                 let mut lang_id = self.language;
-                for (idx, tab) in self.state.lyrics().iter().enumerate() {
+                for (idx, tab) in self.lyrics.iter().enumerate() {
                     ui.with_id(idx as i32, || {
                         if ui.menu_item(&tab.lang).build() {
                             lang_id = idx;
@@ -136,15 +151,15 @@ impl MainWindow {
                     ui.same_line(0.0);
                     if ui.button(im_str!("+"), (0.0, 0.0)) {
                         let tab = ImLanguageTab::new(self.lang_name_buf.to_str(), "");
-                        self.state.lyrics_mut().push(tab);
+                        self.lyrics.push(tab);
                         self.lang_name_buf.clear();
                     }
                 });
             });
             if ui.button(im_str!("X"), (0.0, 0.0)) {
-                self.state.lyrics_mut().remove(self.language);
-                if self.state.lyrics().is_empty() {
-                    self.state.lyrics_mut().push(ImLanguageTab::default());
+                self.lyrics.remove(self.language);
+                if self.lyrics.is_empty() {
+                    self.lyrics.push(ImLanguageTab::default());
                 }
                 self.language = 0;
             }
@@ -157,7 +172,7 @@ impl MainWindow {
             .show_borders(true)
             .build(|| {
                 let mut play = None;
-                for (idx, frame) in self.state.timings_mut().iter_mut().enumerate() {
+                for (idx, frame) in self.timings.iter_mut().enumerate() {
                     ui.with_id(idx as i32, || {
                         if ui.button(im_str!("X"), (0.0, 0.0)) {
                             frame.remove = true;
