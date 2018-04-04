@@ -1,21 +1,13 @@
 
-use std::fs::File;
-use std::path::Path;
-use std::rc::Rc;
-use std::cell::{RefCell, Ref, RefMut};
-
-use serde_json;
 use imgui::*;
-use failure::{Error, err_msg};
 
-use constants::*;
 use configuration::CONFIG;
 
 #[derive(Serialize, Deserialize)]
-struct AppData {
-    lyrics: Vec<LanguageTab>,
-    timings: Vec<TimeFrame>,
-    path: String
+pub struct AppData {
+    pub lyrics: Vec<LanguageTab>,
+    pub timings: Vec<TimeFrame>,
+    pub path: String
 }
 
 #[derive(Default, Clone, Serialize, Deserialize)]
@@ -28,7 +20,7 @@ pub struct TimeFrame {
 }
 
 #[derive(Serialize, Deserialize)]
-struct LanguageTab {
+pub struct LanguageTab {
     lang: String,
     text: String
 }
@@ -88,111 +80,4 @@ impl TimeFrame {
     pub fn new() -> Self {
         TimeFrame::default()
     }
-}
-
-struct InnerState {
-    lyrics: Vec<ImLanguageTab>,
-    timings: Vec<TimeFrame>,
-    path: ImString,
-    logs: Vec<String>,
-}
-
-#[derive(Clone)]
-pub struct State(Rc<RefCell<InnerState>>);
-
-impl State {
-    pub fn new() -> Self {
-        let inner = InnerState {
-            timings: Vec::new(),
-            path: ImString::with_capacity(MAX_PATH_LEN),
-            logs: Vec::new(),
-            lyrics: vec![ImLanguageTab::default()],
-        };
-        State(Rc::new(RefCell::new(inner)))
-    }
-
-    pub fn save<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Error> {
-        write_state_to_file(self.to_app_data(), path)?;
-        Ok(())
-    }
-
-    pub fn open<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {
-        read_state_from_file(path).map(|data| self.update(data))
-    }
-
-    #[inline]
-    pub fn lyrics<'a>(&'a mut self) -> Ref<'a, Vec<ImLanguageTab>> {
-        Ref::map(self.0.borrow(), |x| &x.lyrics)
-    }
-
-    #[inline]
-    pub fn lyrics_mut<'a>(&'a mut self) -> RefMut<'a, Vec<ImLanguageTab>> {
-        RefMut::map(self.0.borrow_mut(), |x| &mut x.lyrics)
-    }
-
-    #[inline]
-    pub fn timings_mut<'a>(&'a mut self) -> RefMut<'a, Vec<TimeFrame>> {
-        RefMut::map(self.0.borrow_mut(), |x| &mut x.timings)
-    }
-
-    #[inline]
-    pub fn path<'a>(&'a self) -> Ref<'a, ImString> {
-        Ref::map(self.0.borrow(), |x| &x.path)
-    }
-
-    #[inline]
-    pub fn path_mut<'a>(&'a mut self) -> RefMut<'a, ImString> {
-        RefMut::map(self.0.borrow_mut(), |x| &mut x.path)
-    }
-
-    #[inline]
-    pub fn logs<'a>(&'a self) -> Ref<'a, [String]> {
-        Ref::map(self.0.borrow(), |x| x.logs.as_slice())
-    }
-
-    #[inline]
-    pub fn log(&mut self, log: String) {
-        self.0.borrow_mut().logs.push(log);
-    }
-
-    fn to_app_data(&self) -> AppData {
-        let this = self.0.borrow();
-        AppData {
-            lyrics: this.lyrics.iter().map(|t| t.into()).collect(),
-            timings: this.timings.iter().cloned().collect(),
-            path: this.path.to_str().to_owned()
-        }
-    }
-
-    fn update(&self, saved_state: AppData) {
-        let mut this = self.0.borrow_mut();
-        this.lyrics = saved_state.lyrics.into_iter().map(|t| t.into()).collect();
-        this.path = ImString::with_capacity(MAX_PATH_LEN);
-        this.path.push_str(&saved_state.path);
-        this.timings = saved_state.timings.into_iter().collect();
-    }
-}
-
-fn read_state_from_file<P: AsRef<Path>>(path: P) -> Result<AppData, Error> {
-    use std::io::Read;
-
-    let path = path.as_ref().with_extension(SAVE_FILE_EXT);
-    ensure!(path.exists(), "Path is invalid");
-
-    let mut file = File::open(path).map_err(|_| err_msg("Can't open file"))?;
-    let metadata = file.metadata().map_err(|_| err_msg("Can't get file metadata"))?;
-    let mut json = String::with_capacity(metadata.len() as usize);
-    file.read_to_string(&mut json).map_err(|_| err_msg("Can't read save file"))?;
-    serde_json::from_str::<AppData>(&json).map_err(|_| err_msg("Can't deserialize project data"))
-}
-
-fn write_state_to_file<P: AsRef<Path>>(state: AppData, path: P) -> Result<(), Error> {
-    use std::io::Write;
-
-    let path = path.as_ref().with_extension(SAVE_FILE_EXT);
-    let mut file = File::create(path).map_err(|_| err_msg("Could not create file"))?;
-    let json = serde_json::to_string(&state).map_err(|_| err_msg("Can't serialize project data"))?;
-    file.write(json.as_bytes())
-        .map(|_| ())
-        .map_err(|_| err_msg("Can't save project to file"))
 }

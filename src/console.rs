@@ -2,16 +2,14 @@
 use imgui::*;
 
 use support_gfx::AppContext;
-use state::State;
 use configuration::CONFIG;
 
 pub struct Console {
-    state: State
 }
 
 impl Console {
-    pub fn new(state: State) -> Self {
-        Console { state }
+    pub fn new() -> Self {
+        Console {}
     }
 }
 
@@ -21,7 +19,8 @@ impl AppContext for Console {
             .show_scrollbar(true)
             .show_borders(true)
             .build(|| {
-                self.state.logs().iter().for_each(|log| ui.text(log));
+                // TODO: Implement using channels
+                // .iter().for_each(|log| ui.text(log));
             });
         true
     }

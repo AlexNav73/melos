@@ -30,13 +30,11 @@ mod configuration;
 
 use imgui::*;
 
-use state::State;
 use support_gfx::AppContext;
 use main_window::MainWindow;
-use dialogs::OpenFileDialog;
+use dialogs::{OpenFileDialog, OpenFileState};
 
 pub struct Program {
-    state: State,
     open_file_dialog: Option<OpenFileDialog>,
     main_window: Option<MainWindow>,
 }
@@ -48,10 +46,10 @@ impl AppContext for Program {
             ui.menu(im_str!("File"))
                 .build(|| {
                     if ui.menu_item(im_str!("New")).build() {
-                        self.main_window = Some(MainWindow::new(self.state.clone()));
+                        self.main_window = Some(MainWindow::new());
                     }
                     if ui.menu_item(im_str!("Open")).build() {
-                        self.open_file_dialog = Some(OpenFileDialog::new(self.state.clone()));
+                        self.open_file_dialog = Some(OpenFileDialog::new());
                     }
                     if ui.menu_item(im_str!("Exit")).build() {
                         opened = false;
@@ -61,9 +59,9 @@ impl AppContext for Program {
 
         if let Some(mut ofd) = self.open_file_dialog.take() {
             match ofd.show(ui) {
-                (true, true) => self.main_window = Some(MainWindow::load(self.state.clone())),
-                (true, false) => self.open_file_dialog = Some(ofd),
-                _ => {}
+                OpenFileState::Opened(data) => self.main_window = Some(MainWindow::load(data)),
+                OpenFileState::Displaying => self.open_file_dialog = Some(ofd),
+                OpenFileState::Closed => {}
             }
         }
 
@@ -80,7 +78,6 @@ impl AppContext for Program {
 impl Program {
     fn new() -> Self {
         Program {
-            state: State::new(),
             open_file_dialog: None,
             main_window: None,
         }
