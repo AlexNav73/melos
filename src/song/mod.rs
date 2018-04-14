@@ -49,8 +49,8 @@ impl<T> Inspectable for T
 
 #[derive(Copy, Clone, Default)]
 pub struct TimeSpan {
-    start: u32,
-    duration: u32
+    pub start: u32,
+    pub duration: u32
 }
 
 impl TimeSpan {

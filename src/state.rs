@@ -1,6 +1,9 @@
 
 use imgui::*;
 
+use std::borrow::Borrow;
+
+use song::TimeSpan;
 use configuration::CONFIG;
 
 #[derive(Serialize, Deserialize)]
@@ -17,6 +20,22 @@ pub struct TimeFrame {
     pub tooltip: Option<String>,
     #[serde(skip)]
     pub remove: bool
+}
+
+impl<T: Borrow<TimeFrame>> From<T> for TimeSpan {
+    fn from(value: T) -> TimeSpan {
+        fn to_s(time: f32) -> u32 {
+            let decimal = time as u32;
+            let real = ((time - decimal as f32) * 100.0) as u32;
+            decimal * 60 + real
+        }
+
+        let value = value.borrow();
+        let start = to_s(value.start);
+        let duration = to_s(value.end) - start;
+
+        TimeSpan::new(start, duration)
+    }
 }
 
 #[derive(Serialize, Deserialize)]

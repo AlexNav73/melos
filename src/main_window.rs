@@ -191,12 +191,12 @@ impl MainWindow {
                         frame.end = time_range[1];
                         ui.same_line(0.0);
                         if ui.button(im_str!("play"), (0.0, 0.0)) {
-                            play = Some((frame.start, frame.end));
+                            play = Some(frame.into());
                         }
                     });
                 }
-                play.map(|(x, y)| {
-                    self.player.update(x, y);
+                play.map(|span| {
+                    self.player.update(span);
                     self.player.play();
                 });
             });

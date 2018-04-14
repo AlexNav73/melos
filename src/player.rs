@@ -10,8 +10,7 @@ use configuration::CONFIG;
 
 pub struct Player {
     song: Song,
-    start: f32,
-    end: f32,
+    time_span: TimeSpan,
     volume: f32,
     loaded_event: Option<Receiver<SongMsg>>
 }
@@ -22,8 +21,7 @@ impl Player {
         Player {
             song: Song::new(),
             volume: CONFIG.player.default_volume,
-            start: 0.0,
-            end: 0.0,
+            time_span: TimeSpan::default(),
             loaded_event: None,
         }
     }
@@ -34,14 +32,13 @@ impl Player {
     }
 
     #[inline]
-    pub fn update(&mut self, start: f32, end: f32) {
-        self.start = start;
-        self.end = end;
+    pub fn update(&mut self, time_span: TimeSpan) {
+        self.time_span = time_span;
     }
 
     #[inline]
     pub fn play(&mut self) {
-        self.song.play(TimeSpan::new(self.start(), self.duration()));
+        self.song.play(self.time_span);
     }
 
     #[inline]
@@ -60,20 +57,20 @@ impl Player {
     }
 
     #[inline]
-    fn start(&self) -> u32 {
-        to_s(self.start)
+    fn start(&mut self) -> f32 {
+        to_f(self.time_span.start)
     }
 
     #[inline]
-    fn duration(&self) -> u32 {
-        to_s(self.end) - self.start()
+    fn end(&mut self) -> f32 {
+        to_f(self.time_span.start + self.time_span.duration)
     }
 
     #[inline]
     fn progress(&self) -> f32 {
-        let start = self.start();
+        let start = self.time_span.start;
         let begin = self.song.progress().checked_sub(start).unwrap_or(start);
-        begin as f32 / self.duration() as f32
+        begin as f32 / self.time_span.duration as f32
     }
 
     #[inline]
@@ -87,12 +84,6 @@ impl Player {
             }
         }
     }
-}
-
-fn to_s(time: f32) -> u32 {
-    let decimal = time as u32;
-    let real = ((time - decimal as f32) * 100.0) as u32;
-    decimal * 60 + real
 }
 
 fn to_f(time: u32) -> f32 {
@@ -110,9 +101,9 @@ impl AppContext for Player {
                     .size((-1.0, 0.0))
                     .overlay_text(im_str!("{:.2}", to_f(self.song.progress())))
                     .build();
-                ui.text(format!("{:.2}", self.start));
+                ui.text(format!("{:.2}", self.start()));
                 ui.same_line(300.0);
-                ui.text(format!("{:.2}", self.end));
+                ui.text(format!("{:.2}", self.end()));
                 ui.slider_float(im_str!("volume"), &mut self.volume, 0.0, 100.0)
                     .display_format(im_str!("%.0f"))
                     .build();
