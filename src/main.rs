@@ -33,10 +33,12 @@ use imgui::*;
 use support_gfx::AppContext;
 use main_window::MainWindow;
 use dialogs::{OpenFileDialog, OpenFileState};
+use console::Console;
 
 pub struct Program {
     open_file_dialog: Option<OpenFileDialog>,
     main_window: Option<MainWindow>,
+    console: Option<Console>
 }
 
 impl AppContext for Program {
@@ -55,6 +57,12 @@ impl AppContext for Program {
                         opened = false;
                     }
                 });
+            ui.menu(im_str!("Windows"))
+                .build(|| {
+                    if ui.menu_item(im_str!("Console")).build() {
+                        self.console = Some(Console::new());
+                    }
+                });
         });
 
         if let Some(mut ofd) = self.open_file_dialog.take() {
@@ -71,6 +79,12 @@ impl AppContext for Program {
             }
         }
 
+        if let Some(mut console) = self.console.take() {
+            if console.show(ui) {
+                self.console = Some(console);
+            }
+        }
+
         opened
     }
 }
@@ -80,6 +94,7 @@ impl Program {
         Program {
             open_file_dialog: None,
             main_window: None,
+            console: None
         }
     }
 }
