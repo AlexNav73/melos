@@ -3,7 +3,6 @@ use imgui::*;
 
 use support_gfx::AppContext;
 use player::Player;
-use console::Console;
 use dialogs::SaveFileDialog;
 use state::{TimeFrame, ImLanguageTab, AppData};
 use configuration::CONFIG;
@@ -14,7 +13,6 @@ pub struct MainWindow {
     timings: Vec<TimeFrame>,
     path: ImString,
     player: Player,
-    console: Console,
     save_file_dialog: Option<SaveFileDialog>,
     tooltip_input: ImString,
     language: usize,
@@ -33,7 +31,6 @@ impl MainWindow {
             lyrics: vec![ImLanguageTab::default()],
             timings: Vec::new(),
             path: ImString::with_capacity(MAX_PATH_LEN),
-            console: Console::new(),
             player: Player::new(),
             tooltip_input: ImString::with_capacity(CONFIG.main_window.tooltip_len),
             lang_name_buf: ImString::with_capacity(CONFIG.main_window.lang_name_len),
@@ -49,7 +46,6 @@ impl MainWindow {
             lyrics: data.lyrics.into_iter().map(|t| t.into()).collect(),
             timings: data.timings.into_iter().collect(),
             path: ImString::new(data.path),
-            console: Console::new(),
             tooltip_input: ImString::with_capacity(CONFIG.main_window.tooltip_len),
             lang_name_buf: ImString::with_capacity(CONFIG.main_window.lang_name_len),
             save_file_dialog: None,
@@ -101,7 +97,6 @@ impl MainWindow {
                 self.show_quatrains(ui);
                 ui.spacing();
                 self.player.show(ui);
-                self.console.show(ui);
                 self.show_save_file_dialog(ui);
             });
 

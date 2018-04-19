@@ -24,7 +24,6 @@ mod dialogs;
 mod state;
 mod console;
 mod song;
-mod fonts;
 mod constants;
 mod configuration;
 

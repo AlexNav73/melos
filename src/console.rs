@@ -18,7 +18,7 @@ impl Console {
         let window_pos = (if CORNER & 1 > 0 { display_size_x - DISTANCE } else { DISTANCE }, if CORNER & 2 > 0 { display_size_y - DISTANCE } else { DISTANCE });
         let window_pos_pivot = (if CORNER & 1 > 0 { 1.0 } else { 0.0 }, if CORNER & 2 > 0 { 1.0 } else { 0.0 });
 
-        let mut opened = true;
+        let mut opened = false;
         ui.window(im_str!("##logs"))
             .position(window_pos, ImGuiCond::Always)
             .size(window_pos_pivot, ImGuiCond::Always)

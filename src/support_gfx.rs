@@ -1,6 +1,6 @@
 
 use glutin;
-use imgui::{ImGui, Ui};
+use imgui::{FontGlyphRange, ImFontConfig, ImGui, ImGuiMouseCursor, Ui};
 use imgui_gfx_renderer::{Renderer, Shaders};
 
 use std::time::Instant;
@@ -52,13 +52,11 @@ pub fn run<T: AppContext>(title: &'static str, mut app: T) {
     };
 
     let mut imgui = ImGui::init();
-
-    let cyrillic = imgui.get_glyph_ranges_cyrillic();
-    imgui.add_font_from_memory_compressed_ttf(
-        ::fonts::tahoma::TAHOMA_FONT_DATA, 
-        15.0,
-        cyrillic);
-
+    let config = ImFontConfig::new().oversample_h(1).pixel_snap_h(true).size_pixels(13.0);
+    config.rasterizer_multiply(1.75)
+        .add_font(&mut imgui.fonts(), include_bytes!("../resources/tahoma.ttf"), &FontGlyphRange::cyrillic());
+    config.merge_mode(true)
+        .add_default_font(&mut imgui.fonts());
     let mut renderer = Renderer::init(&mut imgui, &mut factory, shaders, main_color.clone())
         .expect("Failed to initialize renderer");
 
@@ -114,8 +112,29 @@ pub fn run<T: AppContext>(title: &'static str, mut app: T) {
 
         update_mouse(&mut imgui, &mut mouse_state);
 
-        let size_points = window.get_inner_size().unwrap();
+        let mouse_cursor = imgui.mouse_cursor();
+        if imgui.mouse_draw_cursor() || mouse_cursor == ImGuiMouseCursor::None {
+            window.set_cursor_state(glutin::CursorState::Hide).unwrap();
+        } else {
+            window.set_cursor_state(glutin::CursorState::Normal).unwrap();
+            window.set_cursor(match mouse_cursor {
+                ImGuiMouseCursor::None => unreachable!("mouse_cursor was None!"),
+                ImGuiMouseCursor::Arrow => glutin::MouseCursor::Arrow,
+                ImGuiMouseCursor::TextInput => glutin::MouseCursor::Text,
+                ImGuiMouseCursor::Move => glutin::MouseCursor::Move,
+                ImGuiMouseCursor::ResizeNS => glutin::MouseCursor::NsResize,
+                ImGuiMouseCursor::ResizeEW => glutin::MouseCursor::EwResize,
+                ImGuiMouseCursor::ResizeNESW => glutin::MouseCursor::NeswResize,
+                ImGuiMouseCursor::ResizeNWSE => glutin::MouseCursor::NwseResize,
+            });
+        }
+
         let size_pixels = window.get_inner_size().unwrap();
+        let hdipi = window.hidpi_factor();
+        let size_points = (
+            (size_pixels.0 as f32 / hdipi) as u32,
+            (size_pixels.1 as f32 / hdipi) as u32,
+        );
 
         let ui = imgui.frame(size_points, size_pixels, delta_s);
         if !app.show(&ui) {
