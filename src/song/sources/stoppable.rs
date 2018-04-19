@@ -45,8 +45,8 @@ impl<T> Source for StoppableSource<T>
     }
 
     #[inline]
-    fn samples_rate(&self) -> u32 {
-        self.source.samples_rate()
+    fn sample_rate(&self) -> u32 {
+        self.source.sample_rate()
     }
 
     #[inline]

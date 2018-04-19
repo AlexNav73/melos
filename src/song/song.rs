@@ -49,12 +49,12 @@ impl Song {
                 let file = File::open(path)?;
                 let decoder = rodio::Decoder::new(BufReader::new(file))?;
 
-                let samples_rate = decoder.samples_rate();
+                let sample_rate = decoder.sample_rate();
                 let channels = decoder.channels();
                 let samples = decoder.collect::<Vec<_>>();
                 let controls2 = controls.clone();
 
-                let source = BaseSource::new(channels, samples_rate, samples);
+                let source = BaseSource::new(channels, sample_rate, samples);
                 let source = FloatWindowSource::new(source);
                 let source = SmartSource::new(source, controls.clone());
                 let source = StoppableSource::new(source);
@@ -71,8 +71,7 @@ impl Song {
                 })
                 .convert_samples();
 
-                let endpoint = rodio::get_endpoints_list()
-                    .next()
+                let endpoint = rodio::default_output_device()
                     .ok_or(err_msg("Can't get endpoints list"))?;
                 Ok(rodio::play_raw(&endpoint, source))
             };

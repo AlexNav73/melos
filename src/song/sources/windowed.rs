@@ -30,8 +30,8 @@ impl<T> FloatWindowSource<T>
     }
 
     #[inline]
-    fn samples_rate_for_all_channels(&self) -> usize {
-        self.source.channels() as usize * self.source.samples_rate() as usize
+    fn sample_rate_for_all_channels(&self) -> usize {
+        self.source.channels() as usize * self.source.sample_rate() as usize
     }
 }
 
@@ -51,7 +51,7 @@ impl<T> FloatWindow for FloatWindowSource<T>
 {
     #[inline]
     fn play(&mut self, time: TimeSpan) {
-        let multiplayer = self.samples_rate_for_all_channels();
+        let multiplayer = self.sample_rate_for_all_channels();
         self.start = multiplayer * time.start as usize;
         self.end = self.start + (multiplayer * time.duration as usize);
         if self.source.current() < self.start || self.source.current() > self.end {
@@ -85,8 +85,8 @@ impl<T> Source for FloatWindowSource<T>
     }
 
     #[inline]
-    fn samples_rate(&self) -> u32 {
-        self.source.samples_rate()
+    fn sample_rate(&self) -> u32 {
+        self.source.sample_rate()
     }
 
     #[inline]

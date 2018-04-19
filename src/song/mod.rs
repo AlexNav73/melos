@@ -43,7 +43,7 @@ impl<T> Inspectable for T
           <T as Iterator>::Item: ::rodio::Sample
 {
     fn current_sec(&self) -> usize {
-        self.cursor() / self.channels() as usize / self.samples_rate() as usize
+        self.cursor() / self.channels() as usize / self.sample_rate() as usize
     }
 }
 

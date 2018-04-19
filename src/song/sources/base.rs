@@ -11,22 +11,22 @@ use std::time::Duration;
 pub struct BaseSource {
     current: usize,
     channels: u16,
-    samples_rate: u32,
+    sample_rate: u32,
     duration: Duration,
     source: Vec<Sample> // TODO(alex): abstract over samples type
 }
 
 impl BaseSource {
-    pub fn new(channels: u16, samples_rate: u32, source: Vec<Sample>) -> Self {
+    pub fn new(channels: u16, sample_rate: u32, source: Vec<Sample>) -> Self {
         let duration_ns = 1_000_000_000u64.checked_mul(source.len() as u64).unwrap() /
-            samples_rate as u64 / channels as u64;
+            sample_rate as u64 / channels as u64;
         let duration = Duration::new(duration_ns / 1_000_000_000,
                                     (duration_ns % 1_000_000_000) as u32);
 
         BaseSource {
             current: 0,
             channels,
-            samples_rate,
+            sample_rate,
             duration,
             source,
         }
@@ -60,8 +60,8 @@ impl Source for BaseSource {
     }
 
     #[inline]
-    fn samples_rate(&self) -> u32 {
-        self.samples_rate
+    fn sample_rate(&self) -> u32 {
+        self.sample_rate
     }
 
     #[inline]
@@ -85,7 +85,7 @@ impl fmt::Debug for BaseSource {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("BaseSource")
             .field("channels", &self.channels)
-            .field("samples_rate", &self.samples_rate)
+            .field("sample_rate", &self.sample_rate)
             .field("samples", &" ... ")
             .finish()
     }
