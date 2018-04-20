@@ -36,6 +36,7 @@ use console::{Console, Logger};
 
 pub struct Program {
     logger: Logger,
+    console_enabled: bool,
     open_file_dialog: Option<OpenFileDialog>,
     main_window: Option<MainWindow>,
     console: Option<Console>
@@ -59,7 +60,7 @@ impl AppContext for Program {
                 });
             ui.menu(im_str!("Windows"))
                 .build(|| {
-                    if ui.menu_item(im_str!("Console")).build() {
+                    if ui.menu_item(im_str!("Console")).selected(&mut self.console_enabled).build() {
                         self.console = Some(Console::new(self.logger.clone()));
                     }
                 });
@@ -80,7 +81,7 @@ impl AppContext for Program {
         }
 
         if let Some(mut console) = self.console.take() {
-            if console.show(ui) {
+            if console.show(ui) && self.console_enabled {
                 self.console = Some(console);
             }
         }
@@ -93,6 +94,7 @@ impl Program {
     fn new() -> Self {
         Program {
             logger: Logger::new(),
+            console_enabled: false,
             open_file_dialog: None,
             main_window: None,
             console: None
