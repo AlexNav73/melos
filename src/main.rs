@@ -32,9 +32,10 @@ use imgui::*;
 use support_gfx::AppContext;
 use main_window::MainWindow;
 use dialogs::{OpenFileDialog, OpenFileState};
-use console::Console;
+use console::{Console, Logger};
 
 pub struct Program {
+    logger: Logger,
     open_file_dialog: Option<OpenFileDialog>,
     main_window: Option<MainWindow>,
     console: Option<Console>
@@ -47,7 +48,7 @@ impl AppContext for Program {
             ui.menu(im_str!("File"))
                 .build(|| {
                     if ui.menu_item(im_str!("New")).build() {
-                        self.main_window = Some(MainWindow::new());
+                        self.main_window = Some(MainWindow::new(self.logger.clone()));
                     }
                     if ui.menu_item(im_str!("Open")).build() {
                         self.open_file_dialog = Some(OpenFileDialog::new());
@@ -59,14 +60,14 @@ impl AppContext for Program {
             ui.menu(im_str!("Windows"))
                 .build(|| {
                     if ui.menu_item(im_str!("Console")).build() {
-                        self.console = Some(Console::new());
+                        self.console = Some(Console::new(self.logger.clone()));
                     }
                 });
         });
 
         if let Some(mut ofd) = self.open_file_dialog.take() {
             match ofd.show(ui) {
-                OpenFileState::Opened(data) => self.main_window = Some(MainWindow::load(data)),
+                OpenFileState::Opened(data) => self.main_window = Some(MainWindow::load(self.logger.clone(), data)),
                 OpenFileState::Displaying => self.open_file_dialog = Some(ofd),
                 OpenFileState::Closed => {}
             }
@@ -91,6 +92,7 @@ impl AppContext for Program {
 impl Program {
     fn new() -> Self {
         Program {
+            logger: Logger::new(),
             open_file_dialog: None,
             main_window: None,
             console: None

@@ -7,6 +7,7 @@ use dialogs::SaveFileDialog;
 use state::{TimeFrame, ImLanguageTab, AppData};
 use configuration::CONFIG;
 use constants::MAX_PATH_LEN;
+use console::Logger;
 
 pub struct MainWindow {
     lyrics: Vec<ImLanguageTab>,
@@ -26,12 +27,12 @@ impl AppContext for MainWindow {
 }
 
 impl MainWindow {
-    pub fn new() -> Self {
+    pub fn new(logger: Logger) -> Self {
         MainWindow {
             lyrics: vec![ImLanguageTab::default()],
             timings: Vec::new(),
             path: ImString::with_capacity(MAX_PATH_LEN),
-            player: Player::new(),
+            player: Player::new(logger),
             tooltip_input: ImString::with_capacity(CONFIG.main_window.tooltip_len),
             lang_name_buf: ImString::with_capacity(CONFIG.main_window.lang_name_len),
             save_file_dialog: None,
@@ -39,8 +40,8 @@ impl MainWindow {
         }
     }
 
-    pub fn load(data: AppData) -> Self {
-        let mut player = Player::new();
+    pub fn load(logger: Logger, data: AppData) -> Self {
+        let mut player = Player::new(logger);
         player.open(&data.path);
         MainWindow {
             lyrics: data.lyrics.into_iter().map(|t| t.into()).collect(),

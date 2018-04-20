@@ -7,8 +7,10 @@ use imgui::*;
 use support_gfx::AppContext;
 use song::{Song, SongMsg, TimeSpan};
 use configuration::CONFIG;
+use console::Logger;
 
 pub struct Player {
+    logger: Logger,
     song: Song,
     time_span: TimeSpan,
     volume: f32,
@@ -17,8 +19,9 @@ pub struct Player {
 
 impl Player {
     #[inline]
-    pub fn new() -> Self {
+    pub fn new(logger: Logger) -> Self {
         Player {
+            logger,
             song: Song::new(),
             volume: CONFIG.player.default_volume,
             time_span: TimeSpan::default(),
@@ -78,8 +81,8 @@ impl Player {
         if let Some(ref e) = self.loaded_event {
             if let Ok(msg) = e.try_recv() {
                 match msg {
-                    SongMsg::Loaded => println!("Song was loaded"),
-                    SongMsg::Failed(e) => println!("{}", e)
+                    SongMsg::Loaded => self.logger.log("Song was loaded"),
+                    SongMsg::Failed(e) => self.logger.log(format!("{}", e))
                 }
             }
         }
