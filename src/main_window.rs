@@ -10,6 +10,7 @@ use constants::MAX_PATH_LEN;
 use console::Logger;
 
 pub struct MainWindow {
+    logger: Logger,
     lyrics: Vec<ImLanguageTab>,
     timings: Vec<TimeFrame>,
     path: ImString,
@@ -29,19 +30,20 @@ impl AppContext for MainWindow {
 impl MainWindow {
     pub fn new(logger: Logger) -> Self {
         MainWindow {
+            player: Player::new(logger.clone()),
             lyrics: vec![ImLanguageTab::default()],
             timings: Vec::new(),
             path: ImString::with_capacity(MAX_PATH_LEN),
-            player: Player::new(logger),
             tooltip_input: ImString::with_capacity(CONFIG.main_window.tooltip_len),
             lang_name_buf: ImString::with_capacity(CONFIG.main_window.lang_name_len),
             save_file_dialog: None,
             language: 0,
+            logger,
         }
     }
 
     pub fn load(logger: Logger, data: AppData) -> Self {
-        let mut player = Player::new(logger);
+        let mut player = Player::new(logger.clone());
         player.open(&data.path);
         MainWindow {
             lyrics: data.lyrics.into_iter().map(|t| t.into()).collect(),
@@ -51,6 +53,7 @@ impl MainWindow {
             lang_name_buf: ImString::with_capacity(CONFIG.main_window.lang_name_len),
             save_file_dialog: None,
             language: 0,
+            logger,
             player,
         }
     }
@@ -126,7 +129,7 @@ impl MainWindow {
         ui.menu_bar(|| {
             ui.menu(im_str!("File")).build(|| {
                 if ui.menu_item(im_str!("Save")).build() {
-                    self.save_file_dialog = Some(SaveFileDialog::new());
+                    self.save_file_dialog = Some(SaveFileDialog::new(self.logger.clone()));
                 }
             });
             ui.menu(im_str!("Languages")).build(|| {

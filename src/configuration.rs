@@ -31,7 +31,7 @@ pub struct Player {
 
 #[derive(Debug)]
 pub struct Console {
-    pub console_size: (f32, f32),
+    pub console_pos: (f32, f32),
 }
 
 #[derive(Debug)]
@@ -76,7 +76,7 @@ lazy_static! {
                 default_volume: player.default_volume.unwrap_or(50.0)
             },
             console: Console {
-                console_size: console.console_size.unwrap_or((340.0, 172.0)),
+                console_pos: console.console_pos.unwrap_or((5.0, 25.0)),
             },
             main_window: MainWindow {
                 main_window_size: main_window.main_window_size.unwrap_or((620.0, 565.0)),
@@ -124,7 +124,7 @@ struct Player_ {
 
 #[derive(Debug, Default, Deserialize)]
 struct Console_ {
-    console_size: Option<(f32, f32)>,
+    console_pos: Option<(f32, f32)>,
 }
 
 #[derive(Debug, Default, Deserialize)]

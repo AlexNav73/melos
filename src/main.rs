@@ -52,7 +52,7 @@ impl AppContext for Program {
                         self.main_window = Some(MainWindow::new(self.logger.clone()));
                     }
                     if ui.menu_item(im_str!("Open")).build() {
-                        self.open_file_dialog = Some(OpenFileDialog::new());
+                        self.open_file_dialog = Some(OpenFileDialog::new(self.logger.clone()));
                     }
                     if ui.menu_item(im_str!("Exit")).build() {
                         opened = false;
@@ -91,18 +91,19 @@ impl AppContext for Program {
 }
 
 impl Program {
-    fn new() -> Self {
+    fn new(logger: Logger) -> Self {
         Program {
-            logger: Logger::new(),
-            console_enabled: false,
+            console: Some(Console::new(logger.clone())),
+            logger,
+            console_enabled: true,
             open_file_dialog: None,
             main_window: None,
-            console: None
         }
     }
 }
 
 fn main() {
-    support_gfx::run("melos", Program::new());
+    let logger = Logger::new();
+    support_gfx::run("melos", Program::new(logger));
 }
 

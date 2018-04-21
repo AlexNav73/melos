@@ -11,8 +11,10 @@ use serde_json;
 use state::AppData;
 use constants::*;
 use configuration::CONFIG;
+use console::Logger;
 
 pub struct OpenFileDialog {
+    logger: Logger,
     path: ImString,
     cached_paths: Vec<ImString>,
     selected_item: i32,
@@ -25,8 +27,9 @@ pub enum OpenFileState {
 }
 
 impl OpenFileDialog {
-    pub fn new() -> Self {
+    pub fn new(logger: Logger) -> Self {
         OpenFileDialog {
+            logger,
             path: ImString::with_capacity(MAX_PATH_LEN),
             cached_paths: enumerate_files(),
             selected_item: 0,
@@ -47,7 +50,7 @@ impl OpenFileDialog {
                 if ui.button(im_str!("open"), (0.0, 0.0)) {
                     match read_state_from_file(self.path.to_str()) {
                         Ok(data) => state = OpenFileState::Opened(data),
-                        Err(e) => println!("{}", e)
+                        Err(e) => self.logger.log(format!("{}", e))
                     }
                 }
                 ui.with_item_width(CONFIG.dialogs.file_browser_width, || self.show_file_browser(ui));
@@ -84,13 +87,15 @@ impl OpenFileDialog {
 }
 
 pub struct SaveFileDialog {
+    logger: Logger,
     path: ImString,
     cached_paths: Vec<ImString>,
 }
 
 impl SaveFileDialog {
-    pub fn new() -> Self {
+    pub fn new(logger: Logger) -> Self {
         SaveFileDialog {
+            logger,
             path: ImString::with_capacity(MAX_PATH_LEN),
             cached_paths: enumerate_files(),
         }
@@ -113,9 +118,9 @@ impl SaveFileDialog {
                     match write_state_to_file(get_data(), self.path.to_str()) {
                         Ok(_) => {
                             saved = true;
-                            println!("Project saved successfully");
+                            self.logger.log("Project saved successfully");
                         },
-                        Err(e) => println!("{}", e)
+                        Err(e) => self.logger.log(format!("{}", e))
                     }
                     self.update_cached_paths();
                 }

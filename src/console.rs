@@ -5,6 +5,8 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use std::collections::VecDeque;
 
+use configuration::*;
+
 pub struct Console {
     logger: Logger,
     logs: Vec<String>
@@ -25,17 +27,20 @@ impl Console {
         }
 
         let mut opened = true;
-        ui.window(im_str!("##logs"))
-            .position((5.0, 25.0), ImGuiCond::Always)
-            .opened(&mut opened)
-            .collapsible(false)
-            .title_bar(false)
-            .always_auto_resize(true)
-            .no_focus_on_appearing(true)
-            //.alpha(0.3)
-            .build(|| {
-                self.logs.iter().for_each(|log| ui.text(log));
-            });
+        ui.with_style_var(StyleVar::Alpha(0.3), || {
+            ui.window(im_str!("##logs"))
+                .position(CONFIG.console.console_pos, ImGuiCond::Always)
+                .opened(&mut opened)
+                .collapsible(false)
+                .title_bar(false)
+                .always_auto_resize(true)
+                .no_focus_on_appearing(true)
+                .build(|| {
+                    ui.with_style_var(StyleVar::Alpha(1.0), || {
+                        self.logs.iter().for_each(|log| ui.text(log));
+                    });
+                });
+        });
 
         opened
     }

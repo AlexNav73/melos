@@ -11,7 +11,7 @@ player_frame_size=[340.0, 105.0]
 default_volume=50.0
 
 [console]
-console_size=[340.0, 172.0]
+console_pos=[5.0, 25.0]
 
 [main_window]
 main_window_size=[620.0,565.0]
