@@ -52,11 +52,9 @@ pub fn run<T: AppContext>(title: &'static str, mut app: T) {
     };
 
     let mut imgui = ImGui::init();
-    let config = ImFontConfig::new().oversample_h(1).pixel_snap_h(true).size_pixels(13.0);
-    config.rasterizer_multiply(1.75)
+    let config = ImFontConfig::new().oversample_h(1).pixel_snap_h(true).size_pixels(15.0);
+    config.rasterizer_multiply(1.0)
         .add_font(&mut imgui.fonts(), include_bytes!("../resources/tahoma.ttf"), &FontGlyphRange::cyrillic());
-    config.merge_mode(true)
-        .add_default_font(&mut imgui.fonts());
     let mut renderer = Renderer::init(&mut imgui, &mut factory, shaders, main_color.clone())
         .expect("Failed to initialize renderer");
 
