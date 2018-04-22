@@ -10,6 +10,7 @@ main() {
     if [ ! -z $DISABLE_TESTS ]; then
         return
     fi
+}
 
 # we don't run the "test phase" when doing deploys
 if [ -z $TRAVIS_TAG ]; then
