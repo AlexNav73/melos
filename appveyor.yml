@@ -46,14 +46,14 @@ before_deploy:
   - ps: ci\before_deploy.ps1
 
 deploy:
-  artifact: /.*\.zip/
-  auth_token:
-    secure: HyhcefjtCueD8NnGrFdBkZLnlLEw0jhtjP88P8Uif5EPJjm1UkaoyQ/oFzxnQtWT
-  description: ''
-  on:
-    RUST_VERSION: stable
-    appveyor_repo_tag: true
   provider: GitHub
+  artifact: /.*\.zip/
+  description: ''
+  auth_token:
+    secure: 2NagqO/Mdrd++a2JNudc25p/qIpuqnmU2mgYIaGV99li8JWmaRCEna2F7dodcW3D
+  on:
+    branch: master
+    appveyor_repo_tag: true
 
 cache:
   - C:\Users\appveyor\.cargo\registry
@@ -70,4 +70,4 @@ notifications:
     on_build_success: false
 
 # Building is done in the test phase, so we disable Appveyor's build phase.
-build: false
+# build: false
